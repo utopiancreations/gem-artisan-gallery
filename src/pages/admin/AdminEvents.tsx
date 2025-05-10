@@ -105,19 +105,41 @@ const AdminEvents = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (event: EventData) => {
-    setFormMode('edit');
-    // Convert date strings back to Date objects
-    const formattedEvent = {
-      ...event,
-      dates: event.dates.map(d => ({
+const handleOpenEditModal = (event: EventData) => {
+  setFormMode('edit');
+  // Convert date strings or Firestore timestamps to Date objects
+  const formattedEvent = {
+    ...event,
+    dates: event.dates.map(d => {
+      let dateObj;
+      try {
+        if (d.date instanceof Date) {
+          dateObj = d.date;
+        } else if (d.date?.toDate && typeof d.date.toDate === 'function') {
+          // Handle Firestore timestamps
+          dateObj = d.date.toDate();
+        } else if (typeof d.date === 'string') {
+          dateObj = new Date(d.date);
+        } else if (typeof d.date === 'object' && d.date !== null) {
+          // Handle serialized dates from Firestore
+          dateObj = new Date(d.date.seconds * 1000 + d.date.nanoseconds / 1000000);
+        } else {
+          dateObj = new Date(); // Fallback to current date
+        }
+      } catch (error) {
+        console.error('Error parsing date:', error);
+        dateObj = new Date(); // Fallback to current date
+      }
+      
+      return {
         ...d,
-        date: new Date(d.date)
-      }))
-    };
-    setEventForm(formattedEvent);
-    setIsModalOpen(true);
+        date: dateObj
+      };
+    })
   };
+  setEventForm(formattedEvent);
+  setIsModalOpen(true);
+};
 
   const handleOpenDeleteDialog = (id: string) => {
     setSelectedEvent(id);
@@ -222,14 +244,30 @@ const AdminEvents = () => {
     }
   };
 
-  const getDisplayDate = (dateObj: any) => {
-    try {
-      const date = new Date(dateObj);
-      return format(date, 'MMMM d, yyyy');
-    } catch (error) {
-      return 'Invalid date';
+const getDisplayDate = (dateObj: any) => {
+  try {
+    // Try different approaches to create a valid date
+    let date;
+    if (dateObj instanceof Date) {
+      date = dateObj;
+    } else if (dateObj?.toDate && typeof dateObj.toDate === 'function') {
+      // Handle Firestore timestamps
+      date = dateObj.toDate();
+    } else if (typeof dateObj === 'string') {
+      date = new Date(dateObj);
+    } else if (typeof dateObj === 'object' && dateObj !== null) {
+      // Handle serialized dates from Firestore
+      date = new Date(dateObj.seconds * 1000 + dateObj.nanoseconds / 1000000);
+    } else {
+      throw new Error('Invalid date format');
     }
-  };
+    
+    return format(date, 'MMMM d, yyyy');
+  } catch (error) {
+    console.error('Date parsing error:', error, dateObj);
+    return 'Invalid date';
+  }
+};
 
   if (loading) {
     return (

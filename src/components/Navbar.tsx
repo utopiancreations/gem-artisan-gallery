@@ -9,6 +9,7 @@ const Navbar = () => {
 
   const links = [
     { name: 'Home', path: '/' },
+    { name: 'Gallery', path: '/gallery' }, // Add this line
     { name: 'About', path: '/about' },
     { name: 'Events', path: '/events' },
     { name: 'Contact', path: '/contact' },

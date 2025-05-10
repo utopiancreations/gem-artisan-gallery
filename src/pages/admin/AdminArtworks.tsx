@@ -1,7 +1,6 @@
-
 import { useState, useEffect, ChangeEvent } from 'react';
 import { Plus, Edit, Trash2, Image, Save, X, Check, Upload } from 'lucide-react';
-import { getCollection, createDocument, updateDocument, deleteDocument, uploadFile } from '@/lib/firebase';
+import { getCollection, createDocument, updateDocument, deleteDocument, uploadFile } from '../../lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,12 +29,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import imageCompression from 'browser-image-compression';
 
 interface ArtworkData {
   id?: string;
   title: string;
   description: string;
   imageUrl: string;
+  thumbnailUrl?: string;
   category: string;
   isHighlighted: boolean;
   isFeatured: boolean;
@@ -54,12 +55,14 @@ const AdminArtworks = () => {
   const [selectedArtwork, setSelectedArtwork] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const [saving, setSaving] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   
   // Form state
   const [artworkForm, setArtworkForm] = useState<ArtworkData>({
     title: '',
     description: '',
     imageUrl: '',
+    thumbnailUrl: '',
     category: ARTWORK_CATEGORIES[0],
     isHighlighted: false,
     isFeatured: false
@@ -110,6 +113,7 @@ const AdminArtworks = () => {
       title: '',
       description: '',
       imageUrl: '',
+      thumbnailUrl: '',
       category: ARTWORK_CATEGORIES[0],
       isHighlighted: false,
       isFeatured: false
@@ -118,16 +122,58 @@ const AdminArtworks = () => {
     setPreviewUrl('');
   };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+  // Image compression function
+  const compressAndResizeImage = async (file: File): Promise<File> => {
+    const options = {
+      maxSizeMB: 1, // Max file size in MB
+      maxWidthOrHeight: 1200, // Max width or height in pixels
+      useWebWorker: true,
+      fileType: 'image/jpeg', // Convert all images to JPEG for better compression
+    };
+    
+    try {
+      console.log('Original image size:', file.size / 1024 / 1024, 'MB');
+      const compressedFile = await imageCompression(file, options);
+      console.log('Compressed image size:', compressedFile.size / 1024 / 1024, 'MB');
+      return compressedFile;
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      return file; // Return original file if compression fails
+    }
+  };
+
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      setFile(selectedFile);
       
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(selectedFile);
+      // Show a loading indicator
+      setIsCompressing(true);
+      
+      try {
+        // Compress and resize the image
+        const compressedFile = await compressAndResizeImage(selectedFile);
+        
+        setFile(compressedFile);
+        
+        // Create preview URL for the selected image
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewUrl(reader.result as string);
+          setIsCompressing(false);
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        console.error('Error processing image:', error);
+        setIsCompressing(false);
+        
+        // Fall back to original file if compression fails
+        setFile(selectedFile);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(selectedFile);
+      }
     }
   };
 
@@ -135,17 +181,21 @@ const AdminArtworks = () => {
     setSaving(true);
     try {
       let imageUrl = artworkForm.imageUrl;
+      let thumbnailUrl = artworkForm.thumbnailUrl || artworkForm.imageUrl;
       
       // Upload new image if selected
       if (file) {
         const timestamp = new Date().getTime();
         const path = `artworks/${artworkForm.category}/${timestamp}_${file.name}`;
-        imageUrl = await uploadFile(file, path);
+        const urls = await uploadFile(file, path);
+        imageUrl = urls.original;
+        thumbnailUrl = urls.thumbnail;
       }
       
       const artworkData = {
         ...artworkForm,
-        imageUrl
+        imageUrl,
+        thumbnailUrl
       };
       
       if (formMode === 'add') {
@@ -253,12 +303,16 @@ const AdminArtworks = () => {
                   <TableRow key={artwork.id}>
                     <TableCell>
                       <div className="h-12 w-12 rounded-md overflow-hidden bg-muted">
-                        {artwork.imageUrl && (
+                        {artwork.thumbnailUrl || artwork.imageUrl ? (
                           <img 
-                            src={artwork.imageUrl} 
+                            src={artwork.thumbnailUrl || artwork.imageUrl} 
                             alt={artwork.title} 
                             className="h-full w-full object-cover"
                           />
+                        ) : (
+                          <div className="h-full w-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                            No image
+                          </div>
                         )}
                       </div>
                     </TableCell>
@@ -387,9 +441,19 @@ const AdminArtworks = () => {
                       variant="outline"
                       onClick={() => document.getElementById('artwork-upload')?.click()}
                       className="flex items-center"
+                      disabled={isCompressing}
                     >
-                      <Upload size={16} className="mr-2" />
-                      Select Image
+                      {isCompressing ? (
+                        <>
+                          <span className="mr-2">Optimizing...</span>
+                          {/* You can add a spinner here */}
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={16} className="mr-2" />
+                          Select Image
+                        </>
+                      )}
                     </Button>
                     <input
                       id="artwork-upload"
@@ -397,7 +461,15 @@ const AdminArtworks = () => {
                       accept="image/*"
                       onChange={handleImageChange}
                       className="hidden"
+                      disabled={isCompressing}
                     />
+                    <span className="text-sm text-muted-foreground">
+                      {isCompressing 
+                        ? 'Optimizing image...' 
+                        : file 
+                          ? file.name 
+                          : 'No file selected'}
+                    </span>
                   </div>
                   
                   <div className="border rounded-md overflow-hidden aspect-square">
@@ -413,6 +485,13 @@ const AdminArtworks = () => {
                       </div>
                     )}
                   </div>
+                  
+                  {file && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <p>Image will be optimized and resized for web display.</p>
+                      <p>Original file size: {(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -424,7 +503,7 @@ const AdminArtworks = () => {
             </Button>
             <Button 
               onClick={handleSaveArtwork}
-              disabled={saving || !artworkForm.title}
+              disabled={saving || isCompressing || !artworkForm.title}
               className="flex items-center"
             >
               <Save size={16} className="mr-2" />

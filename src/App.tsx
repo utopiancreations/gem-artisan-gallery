@@ -11,6 +11,8 @@ import HomePage from "./pages/HomePage";
 import AboutPage from "./pages/AboutPage";
 import EventsPage from "./pages/EventsPage";
 import ContactPage from "./pages/ContactPage";
+import GalleryPage from "./pages/GalleryPage";
+import ArtworkDetailPage from "./pages/ArtworkDetailPage";
 
 // Admin Pages
 import LoginPage from "./pages/admin/LoginPage";
@@ -40,6 +42,8 @@ const App = () => (
             <Route path="/about" element={<AboutPage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
+            <Route path="/artwork/:id" element={<ArtworkDetailPage />} />
           </Route>
           
           {/* Admin Routes */}

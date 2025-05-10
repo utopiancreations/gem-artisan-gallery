@@ -1,18 +1,18 @@
-
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where, orderBy, limit, CollectionReference, DocumentData, Query } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// TODO: Replace with your app's Firebase project configuration
+// Your Firebase configuration - make sure to use your actual values here
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+    apiKey: "AIzaSyCVWkpMpy_VeH7QCcSOdCwN3DqRm22Ab2Y",
+    authDomain: "ravenscroft-87ebb.firebaseapp.com",
+    projectId: "ravenscroft-87ebb",
+    storageBucket: "ravenscroft-87ebb.firebasestorage.app",
+    messagingSenderId: "856425088130",
+    appId: "1:856425088130:web:3e6ce464e8c16701b3e09b",
+    measurementId: "G-WYCRQ07SX6"
+  };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -77,14 +77,18 @@ export const getDocument = async (collectionName: string, docId: string) => {
 
 export const getCollection = async (collectionName: string) => {
   try {
+    console.log(`Getting collection: ${collectionName}`);
     const querySnapshot = await getDocs(collection(db, collectionName));
+    console.log(`Retrieved ${querySnapshot.docs.length} documents from ${collectionName}`);
+    
     const documents = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+    
     return documents;
   } catch (error) {
-    console.error("Error getting collection:", error);
+    console.error(`Error getting collection ${collectionName}:`, error);
     throw error;
   }
 };
@@ -126,13 +130,37 @@ export const queryCollection = async (
   }
 };
 
-// Storage helper functions
-export const uploadFile = async (file: File, path: string): Promise<string> => {
+// Updated uploadFile function with multi-size image support
+export const uploadFile = async (file: File, path: string): Promise<{original: string, thumbnail: string}> => {
   try {
-    const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
+    console.log(`Uploading file to path: ${path}`);
+    
+    // Upload original image
+    const originalStorageRef = ref(storage, `${path}/original`);
+    await uploadBytes(originalStorageRef, file);
+    const originalUrl = await getDownloadURL(originalStorageRef);
+    console.log(`Original file uploaded successfully: ${originalUrl}`);
+    
+    // Create and upload thumbnail version if it's an image
+    if (file.type.startsWith('image/')) {
+      // Since we're doing client-side compression, we're using the same file
+      // for thumbnail but storing it with a different path
+      const thumbnailStorageRef = ref(storage, `${path}/thumbnail`);
+      await uploadBytes(thumbnailStorageRef, file);
+      const thumbnailUrl = await getDownloadURL(thumbnailStorageRef);
+      console.log(`Thumbnail created and uploaded: ${thumbnailUrl}`);
+      
+      return {
+        original: originalUrl,
+        thumbnail: thumbnailUrl
+      };
+    }
+    
+    // If not an image, return the same URL for both
+    return {
+      original: originalUrl,
+      thumbnail: originalUrl
+    };
   } catch (error) {
     console.error("Error uploading file:", error);
     throw error;
