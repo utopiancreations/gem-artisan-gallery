@@ -11,24 +11,30 @@ const PublicLayout = () => {
     // Scroll to top on route change
     window.scrollTo(0, 0);
     
-    // Initialize scroll animation observer
+    // Initialize scroll animation observer with better threshold and root margin
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
+        // Add animated class when element comes into view
         if (entry.isIntersecting) {
           entry.target.classList.add('animated');
-          observer.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.1 });
+    }, { 
+      threshold: 0.1,
+      rootMargin: '0px 0px -100px 0px' // Trigger animation before elements fully enter viewport
+    });
     
     // Add animation classes after a short delay to ensure DOM is ready
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       document.querySelectorAll('.section-animate').forEach(section => {
+        // Add baseline opacity to prevent flash of content
+        section.classList.add('opacity-1');
         observer.observe(section);
       });
     }, 100);
     
     return () => {
+      clearTimeout(timer);
       document.querySelectorAll('.section-animate').forEach(section => {
         observer.unobserve(section);
       });

@@ -88,12 +88,31 @@
   }
 }
 
+/* Improved animation system */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .section-animate {
-  @apply opacity-0;
+  opacity: 0;
+  will-change: opacity, transform;
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.section-animate.opacity-1 {
+  opacity: 0; /* Still hidden initially */
 }
 
 .section-animate.animated {
-  @apply animate-fade-in-up;
+  opacity: 1;
+  animation: fadeInUp 0.8s ease forwards;
 }
 
 .image-hover {

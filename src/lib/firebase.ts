@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where, orderBy, limit } from "firebase/firestore";
@@ -89,23 +88,13 @@ export const getCollection = async (collectionName: string) => {
   }
 };
 
-export const queryCollection = async (
-  collectionName: string,
-  whereConditions: Array<{field: string, operator: "==" | "!=" | ">" | ">=" | "<" | "<=", value: any}> = [],
-  orderByField?: string,
-  descending = false,
-  limitCount?: number
-) => {
+export const queryCollection = async (collectionName, whereConditions = [], orderByField, descending = false, limitCount) => {
   try {
-    let q = collection(db, collectionName);
+    let collectionRef = collection(db, collectionName);
+    let q = collectionRef;
     
     if (whereConditions.length > 0) {
-      q = query(
-        q,
-        ...whereConditions.map(condition => 
-          where(condition.field, condition.operator, condition.value)
-        )
-      );
+      q = query(q, ...whereConditions.map((condition) => where(condition.field, condition.operator, condition.value)));
     }
     
     if (orderByField) {
@@ -117,8 +106,7 @@ export const queryCollection = async (
     }
     
     const querySnapshot = await getDocs(q);
-    
-    const documents = querySnapshot.docs.map(doc => ({
+    const documents = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data()
     }));
