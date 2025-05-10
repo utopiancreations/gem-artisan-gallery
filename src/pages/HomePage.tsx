@@ -33,7 +33,7 @@ const HomePage = () => {
           {
             id: '2',
             title: 'Silver Wave Ring',
-            description: 'Sterling silver ring with an elegant wave pattern, symbolizing life's continuous flow.',
+            description: "Sterling silver ring with an elegant wave pattern, symbolizing life's continuous flow.",
             imageUrl: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&q=80',
             category: 'Rings'
           },
@@ -50,7 +50,7 @@ const HomePage = () => {
         setFeaturedArtwork({
           id: '4',
           title: 'Amber Sunrise Pendant',
-          description: 'Inspired by dawn's first light, this handcrafted pendant features ethically sourced amber set in recycled gold. The organic shape mimics the sun breaking through the horizon, while subtle texture work creates a warm, dimensional glow.',
+          description: "Inspired by dawn's first light, this handcrafted pendant features ethically sourced amber set in recycled gold. The organic shape mimics the sun breaking through the horizon, while subtle texture work creates a warm, dimensional glow.",
           imageUrl: 'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&q=80',
           category: 'Pendants',
           isFeatured: true
