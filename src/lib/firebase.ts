@@ -1,6 +1,7 @@
+
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where, orderBy, limit } from "firebase/firestore";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where, orderBy, limit, CollectionReference, DocumentData, Query } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // TODO: Replace with your app's Firebase project configuration
@@ -88,24 +89,31 @@ export const getCollection = async (collectionName: string) => {
   }
 };
 
-export const queryCollection = async (collectionName, whereConditions = [], orderByField, descending = false, limitCount) => {
+export const queryCollection = async (
+  collectionName: string,
+  whereConditions: Array<{field: string, operator: "==" | "!=" | ">" | ">=" | "<" | "<=", value: any}> = [],
+  orderByField?: string,
+  descending: boolean = false,
+  limitCount?: number
+) => {
   try {
-    let collectionRef = collection(db, collectionName);
-    let q = collectionRef;
+    let queryRef: Query<DocumentData> = collection(db, collectionName);
     
     if (whereConditions.length > 0) {
-      q = query(q, ...whereConditions.map((condition) => where(condition.field, condition.operator, condition.value)));
+      whereConditions.forEach((condition) => {
+        queryRef = query(queryRef, where(condition.field, condition.operator, condition.value));
+      });
     }
     
     if (orderByField) {
-      q = query(q, orderBy(orderByField, descending ? 'desc' : 'asc'));
+      queryRef = query(queryRef, orderBy(orderByField, descending ? 'desc' : 'asc'));
     }
     
     if (limitCount) {
-      q = query(q, limit(limitCount));
+      queryRef = query(queryRef, limit(limitCount));
     }
     
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await getDocs(queryRef);
     const documents = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data()

@@ -1,8 +1,9 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Public Pages
 import PublicLayout from "./layouts/PublicLayout";
@@ -15,6 +16,11 @@ import ContactPage from "./pages/ContactPage";
 import LoginPage from "./pages/admin/LoginPage";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./components/admin/AdminDashboard";
+import AdminAboutEdit from "./pages/admin/AdminAboutEdit";
+import AdminArtworks from "./pages/admin/AdminArtworks";
+import AdminEvents from "./pages/admin/AdminEvents";
+import AdminContactSubmissions from "./pages/admin/AdminContactSubmissions";
+import AdminNewsletterSubscribers from "./pages/admin/AdminNewsletterSubscribers";
 
 // Not Found Page
 import NotFound from "./pages/NotFound";
@@ -40,7 +46,11 @@ const App = () => (
           <Route path="/admin/login" element={<LoginPage />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
-            {/* Other admin routes will be added as they are implemented */}
+            <Route path="about" element={<AdminAboutEdit />} />
+            <Route path="artworks" element={<AdminArtworks />} />
+            <Route path="events" element={<AdminEvents />} />
+            <Route path="contact" element={<AdminContactSubmissions />} />
+            <Route path="subscribers" element={<AdminNewsletterSubscribers />} />
           </Route>
           
           {/* Catch-all Route */}

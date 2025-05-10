@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, User, Calendar, Image, LogOut } from 'lucide-react';
+import { Menu, X, LayoutDashboard, User, Calendar, Image, MessageSquare, Mail, LogOut } from 'lucide-react';
 import { auth } from '../../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
@@ -15,10 +15,12 @@ const AdminLayout = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   
   const navItems = [
-    { name: 'Dashboard', path: '/admin', icon: Home },
+    { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'About Me', path: '/admin/about', icon: User },
     { name: 'Artworks', path: '/admin/artworks', icon: Image },
     { name: 'Events', path: '/admin/events', icon: Calendar },
+    { name: 'Contact Submissions', path: '/admin/contact', icon: MessageSquare },
+    { name: 'Newsletter Subscribers', path: '/admin/subscribers', icon: Mail },
   ];
 
   useEffect(() => {
@@ -130,7 +132,7 @@ const AdminLayout = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Home size={18} className="mr-3" />
+              <User size={18} className="mr-3" />
               <span>View Public Site</span>
             </Link>
           </div>
