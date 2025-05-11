@@ -1,166 +1,187 @@
-
+// src/pages/EventsPage.tsx
 import { useState, useEffect } from 'react';
 import SectionHeading from '../components/SectionHeading';
 import EventItem, { EventType } from '../components/EventItem';
 import { getCollection } from '../lib/firebase';
+import { Timestamp } from 'firebase/firestore';
 import { isPastEvent } from '../lib/dateUtils';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+// Interface for the raw event data from Firestore
+interface RawFirestoreEventDate {
+  date: Timestamp;
+  time: string;
+}
+
+interface RawFirestoreEvent {
+  id: string;
+  title: string;
+  address: string;
+  description: string;
+  dates: RawFirestoreEventDate[];
+}
 
 const EventsPage = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<EventType[]>([]);
   const [pastEvents, setPastEvents] = useState<EventType[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Animation control state
+  const [contentVisible, setContentVisible] = useState(false);
 
   useEffect(() => {
+    console.log('Fetching events data...');
+    setLoading(true);
+    setError(null);
+    setContentVisible(false);
+
     const fetchEvents = async () => {
       try {
-        // For demo, we're using static data
-        // In production, replace with the getCollection function
-        
-        // Example event data
-        const eventData: EventType[] = [
-          {
-            id: '1',
-            title: 'Spring Collection Launch',
-            address: 'Art Gallery East, 123 Main Street, Portland',
-            description: 'Join us for the launch of our Spring Collection featuring live music, refreshments, and exclusive first access to new designs.',
-            dates: [
-              { date: new Date(2025, 5, 15), time: '6:00 PM - 9:00 PM' }
-            ]
-          },
-          {
-            id: '2',
-            title: 'Artisan Market Weekend',
-            address: 'Downtown Market Square, 456 Center Ave, Seattle',
-            description: 'A weekend marketplace featuring local artisans. Visit our booth to see our latest creations and meet the artist.',
-            dates: [
-              { date: new Date(2025, 6, 10), time: '10:00 AM - 6:00 PM' },
-              { date: new Date(2025, 6, 11), time: '11:00 AM - 5:00 PM' }
-            ]
-          },
-          {
-            id: '3',
-            title: 'Jewelry Making Workshop',
-            address: 'Creative Arts Center, 789 Workshop Lane, Portland',
-            description: 'Learn basic jewelry making techniques in this hands-on workshop. All materials provided. Limited spots available.',
-            dates: [
-              { date: new Date(2025, 7, 5), time: '2:00 PM - 5:00 PM' }
-            ]
-          },
-          {
-            id: '4',
-            title: 'Holiday Showcase',
-            address: 'Winter Gallery, 101 Snowy Road, Portland',
-            description: 'Special holiday showcase featuring one-of-a-kind pieces perfect for gifting. Complimentary gift wrapping available.',
-            dates: [
-              { date: new Date(2024, 11, 5), time: '12:00 PM - 8:00 PM' },
-              { date: new Date(2024, 11, 6), time: '12:00 PM - 8:00 PM' },
-              { date: new Date(2024, 11, 7), time: '12:00 PM - 6:00 PM' }
-            ]
-          },
-          {
-            id: '5',
-            title: 'Winter Collection Preview',
-            address: 'Elegance Studio, 202 Artisan Way, Portland',
-            description: 'By invitation only: be among the first to see our Winter Collection before its public release.',
-            dates: [
-              { date: new Date(2024, 10, 15), time: '7:00 PM - 9:00 PM' }
-            ]
+        console.log('Starting to fetch events...');
+        const rawEventsData = await getCollection('events') as RawFirestoreEvent[];
+        console.log('Raw events data from Firestore:', rawEventsData);
+
+        let safeRawEventsData = rawEventsData;
+        if (!rawEventsData) {
+          console.warn('rawEventsData is undefined or null after fetch.');
+          safeRawEventsData = [];
+        } else if (rawEventsData.length === 0) {
+          console.log('No events found in Firestore (array is empty).');
+        }
+
+        console.log('Transforming raw event data...');
+        const transformedEvents: EventType[] = safeRawEventsData.map(rawEvent => {
+          if (!rawEvent.id) console.warn('Event missing ID:', rawEvent);
+          if (!rawEvent.dates || !Array.isArray(rawEvent.dates)) {
+            console.error('rawEvent is missing "dates" array or it is not an array!', rawEvent);
+            return {
+              id: rawEvent.id || `unknown-id-${Math.random()}`,
+              title: rawEvent.title || 'Unknown Title',
+              address: rawEvent.address || 'Unknown Address',
+              description: rawEvent.description || 'No Description',
+              dates: [],
+            } as EventType;
           }
-        ];
-        
-        // Filter into upcoming and past events
-        const upcoming = eventData.filter(event => !isPastEvent(event));
-        const past = eventData.filter(event => isPastEvent(event));
-        
-        // Sort upcoming events by earliest date first
+          return {
+            id: rawEvent.id,
+            title: rawEvent.title,
+            address: rawEvent.address,
+            description: rawEvent.description,
+            dates: rawEvent.dates.map(rawDateItem => {
+              if (!rawDateItem.date || typeof rawDateItem.date.toDate !== 'function') {
+                console.error('Invalid Firestore Timestamp object in rawDateItem.date:', rawDateItem, 'for event ID:', rawEvent.id);
+                return { date: new Date(), time: rawDateItem.time || 'Unknown Time' };
+              }
+              return { date: rawDateItem.date.toDate(), time: rawDateItem.time };
+            }),
+          };
+        });
+        console.log('Transformed events:', transformedEvents);
+
+        console.log('Filtering and sorting events...');
+        const upcoming = transformedEvents.filter(event => event && !isPastEvent(event));
+        const past = transformedEvents.filter(event => event && isPastEvent(event));
+
         upcoming.sort((a, b) => {
+          if (!a.dates?.length || !b.dates?.length) return 0;
           const aDate = new Date(a.dates[0].date);
           const bDate = new Date(b.dates[0].date);
           return aDate.getTime() - bDate.getTime();
         });
-        
-        // Sort past events by most recent first
         past.sort((a, b) => {
+          if (!a.dates?.length || !b.dates?.length) return 0;
           const aDate = new Date(a.dates[0].date);
           const bDate = new Date(b.dates[0].date);
           return bDate.getTime() - aDate.getTime();
         });
-        
+        console.log('Sorted upcoming events:', upcoming);
+        console.log('Sorted past events:', past);
+
+        console.log('Setting upcomingEvents and pastEvents states...');
         setUpcomingEvents(upcoming);
         setPastEvents(past);
-        
-        // In production, use code like this instead:
-        /*
-        const events = await getCollection('events') as EventType[];
-        
-        // Filter into upcoming and past events
-        const upcoming = events.filter(event => !isPastEvent(event));
-        const past = events.filter(event => isPastEvent(event));
-        
-        // Sort upcoming events by earliest date first
-        upcoming.sort((a, b) => {
-          const aDate = new Date(a.dates[0].date);
-          const bDate = new Date(b.dates[0].date);
-          return aDate.getTime() - bDate.getTime();
-        });
-        
-        // Sort past events by most recent first
-        past.sort((a, b) => {
-          const aDate = new Date(a.dates[0].date);
-          const bDate = new Date(b.dates[0].date);
-          return bDate.getTime() - aDate.getTime();
-        });
-        
-        setUpcomingEvents(upcoming);
-        setPastEvents(past);
-        */
-        
-      } catch (error) {
-        console.error("Error fetching events:", error);
+        console.log('Event states have been set.');
+
+      } catch (err) {
+        console.error("Error during fetch or processing:", err);
+        setError("Failed to process events. Please try again later.");
       } finally {
+        console.log('Fetch/process attempt complete, setting loading to false.');
         setLoading(false);
+        
+        // Short delay before showing content to ensure smooth transitions
+        setTimeout(() => {
+          setContentVisible(true);
+        }, 50);
       }
     };
 
     fetchEvents();
-    
-    // Initialize scroll animation observer
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animated');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.1 });
-    
-    document.querySelectorAll('.section-animate').forEach(section => {
-      observer.observe(section);
-    });
-    
-    return () => {
-      document.querySelectorAll('.section-animate').forEach(section => {
-        observer.unobserve(section);
-      });
-    };
   }, []);
+  
+  // Effect to control animation of sections
+  useEffect(() => {
+    if (!contentVisible) return;
+    
+    const sections = document.querySelectorAll('.events-section-animate');
+    
+    // Apply a staggered animation to each section
+    sections.forEach((section, index) => {
+      setTimeout(() => {
+        section.classList.add('animated');
+      }, 100 + index * 150);
+    });
+  }, [contentVisible]);
 
   if (loading) {
     return (
       <div className="pt-24 pb-16">
         <div className="container mx-auto px-4">
-          <div className="animate-pulse">
-            <div className="h-10 bg-gray-200 max-w-md mb-4"></div>
-            <div className="h-6 bg-gray-200 max-w-sm mb-10"></div>
+          <SectionHeading
+            title="Events"
+            subtitle="Loading events information..."
+            className="animated" // Always show the heading
+          />
+          <div className="space-y-8 mt-10">
+            {/* Upcoming Events Loading Skeleton */}
+            <div>
+              <h3 className="text-2xl font-bold text-jewelry-dark mb-6">
+                Upcoming Events
+              </h3>
+              <div className="space-y-6">
+                {[1, 2].map(i => (
+                  <div key={i} className="bg-white rounded-lg p-6 shadow-md animate-pulse">
+                    <div className="h-6 bg-gray-200 max-w-xs mb-4"></div>
+                    <div className="h-4 bg-gray-200 max-w-sm mb-3"></div>
+                    <div className="h-4 bg-gray-200 max-w-md"></div>
+                    <div className="mt-4 flex space-x-2">
+                      <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+                      <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             
-            <div className="space-y-6">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="bg-white rounded-lg p-6 shadow-md">
-                  <div className="h-6 bg-gray-200 max-w-xs mb-4"></div>
-                  <div className="h-4 bg-gray-200 max-w-sm mb-3"></div>
-                  <div className="h-4 bg-gray-200 max-w-md"></div>
-                </div>
-              ))}
+            {/* Past Events Loading Skeleton */}
+            <div>
+              <h3 className="text-2xl font-bold text-jewelry-dark mb-6">
+                Past Events
+              </h3>
+              <div className="space-y-6">
+                {[1, 2].map(i => (
+                  <div key={i} className="bg-white rounded-lg p-6 shadow-md animate-pulse">
+                    <div className="h-6 bg-gray-200 max-w-xs mb-4"></div>
+                    <div className="h-4 bg-gray-200 max-w-sm mb-3"></div>
+                    <div className="h-4 bg-gray-200 max-w-md"></div>
+                    <div className="mt-4 flex space-x-2">
+                      <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+                      <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -168,25 +189,47 @@ const EventsPage = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="pt-24 pb-16">
+        <div className="container mx-auto px-4 text-center">
+          <SectionHeading title="Events" subtitle="Something went wrong." />
+          <div className="bg-red-50 p-6 rounded-lg mt-8 text-red-600">
+            <svg className="w-12 h-12 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p className="font-medium text-lg mb-2">Error Loading Events</p>
+            <p>{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="pt-24 pb-16">
+    <div className={`pt-24 pb-16 transition-opacity duration-500 ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
       <div className="container mx-auto px-4">
         <SectionHeading
           title="Events"
           subtitle="Join me at these upcoming events to see my work in person and discuss custom pieces."
-          className="section-animate"
+          className="events-section-animate opacity-0 transform translate-y-4 transition-all duration-500"
         />
         
-        {/* Upcoming Events */}
-        <div className="mb-16 section-animate">
+        {/* --- Upcoming Events --- */}
+        <div className="mb-16 events-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-100">
           <h3 className="text-2xl font-bold text-jewelry-dark mb-6">
             Upcoming Events
           </h3>
-          
           {upcomingEvents.length > 0 ? (
-            <div className="space-y-6">
-              {upcomingEvents.map(event => (
-                <EventItem key={event.id} event={event} />
+            <div className="space-y-6 transition-all">
+              {upcomingEvents.map((event, index) => (
+                <div 
+                  key={event.id} 
+                  className="transform transition duration-300 hover:translate-y-[-3px]"
+                  style={{ transitionDelay: `${index * 100}ms` }} // Staggered entry
+                >
+                  <EventItem event={event} />
+                </div>
               ))}
             </div>
           ) : (
@@ -198,16 +241,21 @@ const EventsPage = () => {
           )}
         </div>
         
-        {/* Past Events */}
-        <div className="section-animate">
+        {/* --- Past Events --- */}
+        <div className="events-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-200">
           <h3 className="text-2xl font-bold text-jewelry-dark mb-6">
             Past Events
           </h3>
-          
           {pastEvents.length > 0 ? (
             <div className="space-y-6">
-              {pastEvents.map(event => (
-                <EventItem key={event.id} event={event} />
+              {pastEvents.map((event, index) => (
+                <div 
+                  key={event.id} 
+                  className="opacity-80 hover:opacity-100 transition-opacity"
+                  style={{ transitionDelay: `${index * 50}ms` }} // Lighter stagger for past events
+                >
+                  <EventItem event={event} />
+                </div>
               ))}
             </div>
           ) : (

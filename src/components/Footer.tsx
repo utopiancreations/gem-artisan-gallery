@@ -41,7 +41,7 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div>
-            <h3 className="text-xl font-semibold mb-4">Elegance Artistry</h3>
+            <h3 className="text-xl font-semibold mb-4">Ravenscroft Design</h3>
             <p className="text-gray-300 max-w-md">
               Handcrafted jewelry that captures moments and emotions in timeless pieces. Each creation
               tells a unique story, designed with passion and meticulous attention to detail.
@@ -86,7 +86,7 @@ const Footer = () => {
         
         <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-400 text-sm">
-            © {new Date().getFullYear()} Elegance Artistry. All rights reserved.
+            © {new Date().getFullYear()} Ravenscroft Design. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <a href="#" className="text-gray-400 hover:text-white transition-colors">

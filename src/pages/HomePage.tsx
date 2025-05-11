@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+// src/pages/HomePage.tsx
+import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SectionHeading from '../components/SectionHeading';
@@ -6,232 +7,248 @@ import ArtworkCard, { ArtworkType } from '../components/ArtworkCard';
 import EventItem, { EventType } from '../components/EventItem';
 import { getCollection } from '../lib/firebase';
 import { isInFuture } from '../lib/dateUtils';
+import { Timestamp } from 'firebase/firestore';
+import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSection from '../components/LoadingSection';
+import SkeletonCard from '../components/SkeletonCard';
+
+// Interface for raw event data from Firestore
+interface RawEventDateDetail {
+  date: Timestamp;
+  time: string;
+}
+
+interface RawEventType {
+  id: string;
+  title: string;
+  address: string;
+  description: string;
+  dates: RawEventDateDetail[];
+}
+
+// Define a type that includes the createdAt field for sorting
+interface ArtworkWithTimestamp extends ArtworkType {
+  createdAt?: any;
+}
 
 const HomePage = () => {
-  const [highlightedWorks, setHighlightedWorks] = useState<ArtworkType[]>([]);
-  const [featuredArtwork, setFeaturedArtwork] = useState<ArtworkType | null>(null);
-  const [latestCreations, setLatestCreations] = useState<ArtworkType[]>([]);
+  // Main state variables
+  const [highlightedWorks, setHighlightedWorks] = useState<ArtworkWithTimestamp[]>([]);
+  const [featuredArtwork, setFeaturedArtwork] = useState<ArtworkWithTimestamp | null>(null);
+  const [latestCreations, setLatestCreations] = useState<ArtworkWithTimestamp[]>([]);
   const [upcomingEvent, setUpcomingEvent] = useState<EventType | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  
+  // Granular loading states
   const [loading, setLoading] = useState(true);
-  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [loadingHighlighted, setLoadingHighlighted] = useState(true);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [loadingLatest, setLoadingLatest] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  
+  // Animation control state
+  const [contentVisible, setContentVisible] = useState(false);
 
-  const addDebugInfo = (info: string) => {
-    setDebugInfo(prev => prev + '\n' + info);
-    console.log(info);
+  const prevSlide = () => {
+    if (highlightedWorks.length === 0) return;
+    setCurrentSlide((current) => (current - 1 + highlightedWorks.length) % highlightedWorks.length);
   };
 
-  // Helper to normalize boolean values
+  const nextSlide = () => {
+    if (highlightedWorks.length === 0) return;
+    setCurrentSlide((current) => (current + 1) % highlightedWorks.length);
+  };
+
   const normalizeBoolean = (value: any): boolean => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value.toLowerCase() === 'true';
-    return !!value; // Convert to boolean
+    return !!value;
   };
-
-  // Define carousel controls as useCallback functions to prevent recreating them on each render
-  const nextSlide = useCallback(() => {
-    addDebugInfo(`nextSlide clicked, current: ${currentSlide}, total: ${highlightedWorks.length}`);
-    if (highlightedWorks.length === 0) return;
-    setCurrentSlide((prev) => (prev + 1) % highlightedWorks.length);
-  }, [highlightedWorks.length, currentSlide]);
-
-  const prevSlide = useCallback(() => {
-    addDebugInfo(`prevSlide clicked, current: ${currentSlide}, total: ${highlightedWorks.length}`);
-    if (highlightedWorks.length === 0) return;
-    setCurrentSlide((prev) => (prev - 1 + highlightedWorks.length) % highlightedWorks.length);
-  }, [highlightedWorks.length, currentSlide]);
 
   useEffect(() => {
     const fetchHomePageData = async () => {
       try {
-        addDebugInfo('Fetching home page data...');
+        console.log('Fetching home page data...');
         setLoading(true);
-        
-        // Get all artworks
-        const allArtworks = await getCollection('artworks') as ArtworkType[];
-        addDebugInfo(`Fetched ${allArtworks.length} artworks`);
-        
-        if (!allArtworks || allArtworks.length === 0) {
-          addDebugInfo('No artworks found');
-          setLoading(false);
-          return;
-        }
-        
-        // Normalize the artwork data - ensure boolean values are actual booleans
-        const normalizedArtworks = allArtworks.map(artwork => ({
-          ...artwork,
-          isHighlighted: normalizeBoolean(artwork.isHighlighted),
-          isFeatured: normalizeBoolean(artwork.isFeatured)
-        }));
-        
-        // Log each artwork's highlighted and featured status
-        normalizedArtworks.forEach((artwork, index) => {
-          addDebugInfo(`Artwork ${index + 1}: ${artwork.title} - Highlighted: ${artwork.isHighlighted ? 'Yes' : 'No'}, Featured: ${artwork.isFeatured ? 'Yes' : 'No'}`);
-        });
-        
-        // Filter highlighted works
-        const highlighted = normalizedArtworks.filter(artwork => artwork.isHighlighted === true);
-        addDebugInfo(`Found ${highlighted.length} highlighted works after normalization`);
-        
-        // Find featured artwork (use the first one found)
-        const featured = normalizedArtworks.find(artwork => artwork.isFeatured === true);
-        addDebugInfo(`Featured artwork after normalization: ${featured ? featured.title : 'None'}`);
-        
-        // Sort by createdAt for latest creations
-        let sortedByDate = [...normalizedArtworks];
-        try {
-          sortedByDate = [...normalizedArtworks].sort((a, b) => {
-            try {
-              const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-              const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-              return dateB.getTime() - dateA.getTime();
-            } catch (error) {
-              addDebugInfo(`Error sorting by date: ${error}`);
-              return 0;
-            }
+        setLoadingHighlighted(true);
+        setLoadingFeatured(true);
+        setLoadingLatest(true);
+        setLoadingEvents(true);
+        setContentVisible(false);
+
+        // --- Artwork Fetching ---
+        const allArtworksRaw = await getCollection('artworks') as any[];
+        console.log(`Processed ${allArtworksRaw.length} artworks`);
+
+        if (!allArtworksRaw || allArtworksRaw.length === 0) {
+          console.log('No artworks found');
+          setLoadingHighlighted(false);
+          setLoadingFeatured(false);
+          setLoadingLatest(false);
+        } else {
+          const normalizedArtworks: ArtworkWithTimestamp[] = allArtworksRaw.map(artwork => ({
+            ...artwork,
+            isHighlighted: normalizeBoolean(artwork.isHighlighted),
+            isFeatured: normalizeBoolean(artwork.isFeatured),
+            createdAt: artwork.createdAt?.toDate ? artwork.createdAt.toDate() : (artwork.createdAt ? new Date(artwork.createdAt) : new Date(0)),
+          }));
+
+          // Create a sorted copy of all artworks by createdAt in descending order
+          const sortedByDateArtworks = [...normalizedArtworks].sort((a, b) => {
+            const dateA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
+            const dateB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
+            return dateB - dateA; // Descending order
           });
-          addDebugInfo('Successfully sorted artworks by date');
-        } catch (error) {
-          addDebugInfo(`Error in sort: ${error}`);
+
+          // Filter for explicitly highlighted and featured works
+          const highlighted = normalizedArtworks.filter(artwork => artwork.isHighlighted === true);
+          const featured = normalizedArtworks.find(artwork => artwork.isFeatured === true);
+
+          // Process highlighted works
+          if (highlighted.length > 0) {
+            setHighlightedWorks(highlighted);
+            if (currentSlide >= highlighted.length && highlighted.length > 0) setCurrentSlide(0);
+          } else {
+            const fallbackHighlighted = sortedByDateArtworks.slice(0, 3);
+            setHighlightedWorks(fallbackHighlighted);
+            if (currentSlide >= fallbackHighlighted.length && fallbackHighlighted.length > 0) setCurrentSlide(0);
+          }
+          setLoadingHighlighted(false);
+
+          // Process featured artwork
+          if (featured) {
+            setFeaturedArtwork(featured);
+          } else if (sortedByDateArtworks.length > 0) {
+            setFeaturedArtwork(sortedByDateArtworks[0]);
+          }
+          setLoadingFeatured(false);
+
+          // Process latest creations
+          setLatestCreations(sortedByDateArtworks.slice(0, 3));
+          setLoadingLatest(false);
         }
-        
-        // Set state with real data
-        if (highlighted.length > 0) {
-          setHighlightedWorks(highlighted);
-          addDebugInfo(`Set ${highlighted.length} highlighted works`);
-          
-          // Force currentSlide to be in valid range
-          if (currentSlide >= highlighted.length) {
-            setCurrentSlide(0);
+
+        // --- Upcoming Event Fetching and Processing ---
+        const rawEvents = await getCollection('events') as RawEventType[];
+        console.log(`Processed ${rawEvents.length} raw events`);
+
+        if (rawEvents && rawEvents.length > 0) {
+          // 1. Transform raw events to EventType
+          const transformedEvents: EventType[] = rawEvents.map(rawEvent => ({
+            id: rawEvent.id,
+            title: rawEvent.title,
+            address: rawEvent.address,
+            description: rawEvent.description,
+            dates: rawEvent.dates.map(d => ({
+              date: d.date.toDate(),
+              time: d.time,
+            })),
+          }));
+
+          // 2. Filter for future events
+          const futureEvents = transformedEvents.filter(event =>
+            event.dates.some(d => isInFuture(d.date as Date))
+          );
+          console.log(`Found ${futureEvents.length} future events after transformation`);
+
+          if (futureEvents.length > 0) {
+            // 3. Sort future events to get the soonest one first
+            futureEvents.sort((a, b) => {
+              const firstDateA = a.dates[0]?.date;
+              const firstDateB = b.dates[0]?.date;
+              const dateA = firstDateA instanceof Date ? firstDateA.getTime() : new Date(firstDateA || 0).getTime();
+              const dateB = firstDateB instanceof Date ? firstDateB.getTime() : new Date(firstDateB || 0).getTime();
+              return dateA - dateB; // Ascending order (soonest first)
+            });
+            setUpcomingEvent(futureEvents[0]);
+            console.log('Set upcoming event:', futureEvents[0].title);
+          } else {
+            setUpcomingEvent(null);
+            console.log('No upcoming events found.');
           }
         } else {
-          const fallbackHighlighted = sortedByDate.slice(0, 3);
-          setHighlightedWorks(fallbackHighlighted);
-          addDebugInfo(`No highlighted works found, using latest ${fallbackHighlighted.length} works instead`);
+          setUpcomingEvent(null);
+          console.log('No events fetched from collection.');
         }
-        
-        if (featured) {
-          setFeaturedArtwork(featured);
-          addDebugInfo(`Set featured artwork: ${featured.title}`);
-        } else if (sortedByDate.length > 0) {
-          setFeaturedArtwork(sortedByDate[0]);
-          addDebugInfo(`No featured artwork found, using most recent: ${sortedByDate[0].title}`);
-        }
-        
-        setLatestCreations(sortedByDate.slice(0, 3));
-        addDebugInfo(`Set ${Math.min(sortedByDate.length, 3)} latest creations`);
-        
-        // Get upcoming events
-        const events = await getCollection('events') as EventType[];
-        addDebugInfo(`Fetched ${events.length} events`);
-        
-        if (events && events.length > 0) {
-          // Filter for upcoming events
-          const futureEvents = events.filter(event => {
-            try {
-              return event.dates.some(d => {
-                const eventDate = d.date?.toDate ? d.date.toDate() : new Date(d.date);
-                return isInFuture(eventDate);
-              });
-            } catch (error) {
-              addDebugInfo(`Error filtering events: ${error}`);
-              return false;
-            }
-          });
-          
-          addDebugInfo(`Found ${futureEvents.length} upcoming events`);
-          
-          if (futureEvents.length > 0) {
-            setUpcomingEvent(futureEvents[0]);
-            addDebugInfo('Set upcoming event');
-          }
-        }
+        setLoadingEvents(false);
+
       } catch (error) {
-        addDebugInfo(`Error fetching home page data: ${error}`);
+        console.error(`Error fetching home page data: ${error}`);
+        // Reset all loading states on error
+        setLoadingHighlighted(false);
+        setLoadingFeatured(false);
+        setLoadingLatest(false);
+        setLoadingEvents(false);
       } finally {
         setLoading(false);
-        addDebugInfo('Finished loading data');
+        console.log('Finished loading all home page data');
       }
     };
 
     fetchHomePageData();
-  }, [currentSlide]);
+  }, []);
 
-  // Auto-advance carousel in a separate useEffect
+  // Effect to handle animation after content is loaded
   useEffect(() => {
-    // Only set up auto-advance if we have slides
-    if (highlightedWorks.length === 0) return;
+    if (!loading) {
+      // Set a very short timeout to ensure CSS transitions can take effect
+      const timer = setTimeout(() => {
+        setContentVisible(true);
+      }, 50);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+  
+  // Effect to control animation of sections
+  useEffect(() => {
+    if (!contentVisible) return;
     
-    addDebugInfo(`Setting up carousel auto-advance, total slides: ${highlightedWorks.length}`);
+    const sections = document.querySelectorAll('.home-section-animate');
     
+    // Apply a staggered animation to each section
+    sections.forEach((section, index) => {
+      setTimeout(() => {
+        section.classList.add('animated');
+      }, 100 + index * 200); // Slightly longer stagger for home page
+    });
+  }, [contentVisible]);
+
+  // Effect for auto-sliding the hero carousel
+  useEffect(() => {
+    if (highlightedWorks.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentSlide(prev => {
-        const next = (prev + 1) % highlightedWorks.length;
-        addDebugInfo(`Auto-advancing carousel: ${prev} -> ${next}`);
-        return next;
-      });
+      setCurrentSlide((current) => (current + 1) % highlightedWorks.length);
     }, 5000);
-    
-    return () => {
-      addDebugInfo('Clearing carousel auto-advance');
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [highlightedWorks.length]);
 
+  // Full-page loading state
   if (loading) {
     return (
-      <div className="mt-24 py-20 text-center">
-        <div className="animate-pulse flex justify-center">
-          <div className="h-16 w-16 bg-jewelry-light rounded-full"></div>
-        </div>
-        <p className="mt-4 text-jewelry-gray">Loading beautiful creations...</p>
+      <div className="pt-16">
+        <section className="relative h-[70vh] min-h-[500px] bg-jewelry-dark flex items-center justify-center">
+          <LoadingSpinner size="large" color="white" text="Loading beautiful creations..." />
+        </section>
+        <LoadingSection height="h-96" text="Preparing your experience..." />
       </div>
     );
   }
 
-  // Safe access to highlighted work for current slide
+  // Get the current highlighted work for the hero section based on the slide index
   const currentHighlightedWork = highlightedWorks[currentSlide] || null;
 
   return (
-    <div className="pt-16">
-      {/* Debug Info (remove in production) */}
-      <div className="bg-gray-100 p-4 text-xs" style={{whiteSpace: 'pre-wrap'}}>
-        <strong>Debug Info:</strong>
-        <br/>
-        Highlighted Works: {highlightedWorks.length}
-        <br/>
-        Current Slide: {currentSlide}
-        <br/>
-        Current Work: {currentHighlightedWork?.title || 'None'}
-        <br/>
-        Featured Artwork: {featuredArtwork ? featuredArtwork.title : 'None'}
-        <br/>
-        Latest Creations: {latestCreations.length}
-        <br/>
-        Upcoming Event: {upcomingEvent ? 'Yes' : 'None'}
-        <br/>
-        <br/>
-        Log:
-        {debugInfo}
-        <hr />
-        <button 
-          onClick={prevSlide} 
-          className="bg-blue-500 text-white px-2 py-1 rounded mr-2"
-        >
-          Test Prev
-        </button>
-        <button 
-          onClick={nextSlide} 
-          className="bg-blue-500 text-white px-2 py-1 rounded"
-        >
-          Test Next
-        </button>
-      </div>
-
-      {/* Hero Section with Carousel */}
-      <section className="relative h-[70vh] min-h-[500px] bg-jewelry-dark overflow-hidden">
-        {highlightedWorks.length > 0 && currentHighlightedWork ? (
+    <div className={`pt-16 transition-opacity duration-500 ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Hero Section - Displays Highlighted Works (or fallback) */}
+      <section className="relative h-[70vh] min-h-[500px] bg-jewelry-dark overflow-hidden home-section-animate opacity-0 transform translate-y-4 transition-all duration-500">
+        {loadingHighlighted ? (
+          <div className="h-full flex items-center justify-center">
+            <LoadingSpinner size="large" color="white" text="Loading highlights..." />
+          </div>
+        ) : highlightedWorks.length > 0 && currentHighlightedWork ? (
           <>
+            {/* Background Image */}
             <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out">
               <img
                 src={currentHighlightedWork.imageUrl}
@@ -242,18 +259,23 @@ const HomePage = () => {
                   e.currentTarget.src = 'https://placehold.co/1200x800?text=Image+Not+Available';
                 }}
               />
+              {/* Overlay for better text readability */}
               <div className="absolute inset-0 bg-gradient-to-r from-jewelry-dark/70 to-jewelry-dark/30"></div>
             </div>
-            
+
+            {/* Content Overlay */}
             <div className="container mx-auto px-4 h-full flex flex-col justify-center relative z-10">
-              <div className="max-w-2xl section-animate">
+              <div className="max-w-2xl">
+                {/* Hero Heading */}
                 <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
                   Handcrafted <br />
                   <span className="text-jewelry-accent">Elegance</span>
                 </h1>
+                {/* Hero Subtitle/Description */}
                 <p className="text-xl text-gray-200 mb-8 max-w-lg">
                   Unique jewelry pieces that tell a story, designed and crafted with passion and precision.
                 </p>
+                {/* Action Buttons */}
                 <div className="flex flex-wrap gap-4">
                   <Link to="/about" className="px-8 py-3 bg-white text-jewelry-dark font-medium rounded-md hover:bg-opacity-90 transition-colors">
                     Discover My Story
@@ -264,18 +286,16 @@ const HomePage = () => {
                 </div>
               </div>
             </div>
-            
-            {/* Carousel Controls */}
-            <div className="absolute bottom-6 left-0 right-0">
+
+            {/* Carousel Navigation (Dots and Arrows) */}
+            <div className="absolute bottom-6 left-0 right-0 z-20">
               <div className="container mx-auto px-4 flex justify-between items-center">
+                {/* Navigation Dots */}
                 <div className="flex space-x-2">
                   {highlightedWorks.map((_, index) => (
                     <button
                       key={index}
-                      onClick={() => {
-                        addDebugInfo(`Dot ${index} clicked`);
-                        setCurrentSlide(index);
-                      }}
+                      onClick={() => setCurrentSlide(index)}
                       className={`w-2.5 h-2.5 rounded-full transition-colors ${
                         currentSlide === index ? 'bg-white' : 'bg-white/40'
                       }`}
@@ -283,23 +303,17 @@ const HomePage = () => {
                     />
                   ))}
                 </div>
-                
+                {/* Navigation Arrows */}
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => {
-                      addDebugInfo('Prev button clicked');
-                      prevSlide();
-                    }}
+                    onClick={prevSlide}
                     className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
                     aria-label="Previous slide"
                   >
                     <ArrowLeft size={18} />
                   </button>
                   <button
-                    onClick={() => {
-                      addDebugInfo('Next button clicked');
-                      nextSlide();
-                    }}
+                    onClick={nextSlide}
                     className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
                     aria-label="Next slide"
                   >
@@ -310,6 +324,7 @@ const HomePage = () => {
             </div>
           </>
         ) : (
+          // Fallback JSX when no highlighted works
           <div className="container mx-auto px-4 h-full flex flex-col justify-center">
             <div className="text-center text-white">
               <h1 className="text-4xl font-bold mb-4">No Highlighted Works Yet</h1>
@@ -322,21 +337,34 @@ const HomePage = () => {
       </section>
 
       {/* Upcoming Event Section */}
-      {upcomingEvent && (
-        <section className="py-16 bg-jewelry-light section-animate">
+      {loadingEvents ? (
+        <section className="py-16 bg-jewelry-light">
           <div className="container mx-auto px-4">
-            <SectionHeading 
-              title="Upcoming Event" 
+            <SectionHeading
+              title="Upcoming Event"
+              subtitle="Loading event information..."
+              centered
+            />
+            <div className="max-w-3xl mx-auto">
+              <LoadingSection height="h-48" text="" spinnerSize="small" />
+            </div>
+          </div>
+        </section>
+      ) : upcomingEvent && (
+        <section className="py-16 bg-jewelry-light home-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-100">
+          <div className="container mx-auto px-4">
+            <SectionHeading
+              title="Upcoming Event"
               subtitle="Join me at my next showcase to experience my latest creations in person."
               centered
             />
-            
+            {/* Display the upcoming event details */}
             <div className="max-w-3xl mx-auto">
               <EventItem event={upcomingEvent} />
-              
+              {/* Link to view all events */}
               <div className="mt-8 text-center">
-                <Link 
-                  to="/events" 
+                <Link
+                  to="/events"
                   className="inline-flex items-center text-jewelry-dark font-medium hover:text-jewelry-accent transition-colors"
                 >
                   View All Events
@@ -349,19 +377,42 @@ const HomePage = () => {
       )}
 
       {/* Featured Artwork Section */}
-      {featuredArtwork && (
-        <section className="py-20 section-animate">
+      {loadingFeatured ? (
+        <section className="py-20">
           <div className="container mx-auto px-4">
-            <SectionHeading 
-              title="Featured Creation" 
+            <SectionHeading
+              title="Featured Creation"
+              subtitle="Loading featured creation..."
+            />
+            <div className="grid md:grid-cols-2 gap-10 items-center">
+              <div className="rounded-xl overflow-hidden aspect-square bg-gray-200 animate-pulse"></div>
+              <div className="space-y-4">
+                <div className="h-6 w-24 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-8 w-3/4 bg-gray-300 rounded animate-pulse"></div>
+                <div className="space-y-2">
+                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-5/6 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-4/6 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-10 w-32 bg-gray-300 rounded-md animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : featuredArtwork && (
+        <section className="py-20 home-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-200">
+          <div className="container mx-auto px-4">
+            <SectionHeading
+              title="Featured Creation"
               subtitle="A special piece that embodies my artistic vision and craftsmanship."
             />
-            
+            {/* Grid layout for featured artwork */}
             <div className="grid md:grid-cols-2 gap-10 items-center">
+              {/* Featured Image */}
               <div className="rounded-xl overflow-hidden aspect-square">
-                <img 
-                  src={featuredArtwork.imageUrl} 
-                  alt={featuredArtwork.title} 
+                <img
+                  src={featuredArtwork.imageUrl}
+                  alt={featuredArtwork.title}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     console.error('Failed to load featured image:', featuredArtwork.imageUrl);
@@ -369,18 +420,22 @@ const HomePage = () => {
                   }}
                 />
               </div>
-              
+              {/* Featured Artwork Details */}
               <div>
+                {/* Category Tag */}
                 <span className="inline-block px-3 py-1 bg-jewelry-light rounded-full text-sm font-medium text-jewelry-dark mb-4">
                   {featuredArtwork.category}
                 </span>
+                {/* Title */}
                 <h3 className="text-3xl font-bold text-jewelry-dark mb-4">
                   {featuredArtwork.title}
                 </h3>
+                {/* Description */}
                 <p className="text-jewelry-gray mb-6">
                   {featuredArtwork.description}
                 </p>
-                <Link 
+                {/* View Details Link */}
+                <Link
                   to={`/artwork/${featuredArtwork.id}`}
                   className="inline-block px-6 py-3 bg-jewelry-dark text-white font-medium rounded-md hover:bg-opacity-90 transition-colors"
                 >
@@ -393,15 +448,21 @@ const HomePage = () => {
       )}
 
       {/* Latest Creations Section */}
-      <section className="py-20 bg-gray-50 section-animate">
+      <section className="py-20 bg-gray-50 home-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-300">
         <div className="container mx-auto px-4">
-          <SectionHeading 
-            title="Latest Creations" 
-            subtitle="Explore my most recent work, each piece crafted with attention to detail and artistic vision."
+          <SectionHeading
+            title="Latest Creations"
+            subtitle={loadingLatest ? "Loading recent work..." : "Explore my most recent work, each piece crafted with attention to detail and artistic vision."}
             centered
           />
           
-          {latestCreations.length > 0 ? (
+          {loadingLatest ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3].map((index) => (
+                <SkeletonCard key={index} />
+              ))}
+            </div>
+          ) : latestCreations.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {latestCreations.map((artwork) => (
                 <ArtworkCard key={artwork.id} artwork={artwork} />
@@ -413,8 +474,9 @@ const HomePage = () => {
             </div>
           )}
           
+          {/* Link to the full gallery */}
           <div className="mt-12 text-center">
-            <Link 
+            <Link
               to="/gallery"
               className="inline-block px-8 py-3 bg-jewelry-accent text-white font-medium rounded-md hover:bg-opacity-90 transition-colors"
             >

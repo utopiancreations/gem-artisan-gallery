@@ -1,9 +1,10 @@
-
-import { useState } from 'react';
+// src/pages/ContactPage.tsx
+import { useState, useEffect } from 'react';
 import { Mail, Phone, Send } from 'lucide-react';
 import SectionHeading from '../components/SectionHeading';
 import { createDocument } from '../lib/firebase';
 import { useToast } from "@/hooks/use-toast";
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const ContactPage = () => {
   const { toast } = useToast();
@@ -13,6 +14,33 @@ const ContactPage = () => {
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Animation control state
+  const [contentVisible, setContentVisible] = useState(false);
+
+  // Set content visible after initial render
+  useEffect(() => {
+    // Short timeout to ensure DOM is ready
+    const timer = setTimeout(() => {
+      setContentVisible(true);
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Effect to control animation of sections
+  useEffect(() => {
+    if (!contentVisible) return;
+    
+    const sections = document.querySelectorAll('.contact-section-animate');
+    
+    // Apply a staggered animation to each section
+    sections.forEach((section, index) => {
+      setTimeout(() => {
+        section.classList.add('animated');
+      }, 100 + index * 150);
+    });
+  }, [contentVisible]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -67,18 +95,18 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="pt-24 pb-16">
+    <div className={`pt-24 pb-16 transition-opacity duration-500 ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
       <div className="container mx-auto px-4">
         <SectionHeading
           title="Contact Me"
           subtitle="Have a question about my work or interested in a custom piece? Get in touch."
-          className="section-animate"
+          className="contact-section-animate opacity-0 transform translate-y-4 transition-all duration-500"
         />
         
-        <div className="grid md:grid-cols-2 gap-10">
+        <div className="grid md:grid-cols-2 gap-10 mt-8">
           {/* Contact Form */}
-          <div className="section-animate">
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 md:p-8">
+          <div className="contact-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-100">
+            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 md:p-8 transition-all duration-300 hover:shadow-lg">
               <div className="space-y-5">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-jewelry-dark mb-1">
@@ -93,6 +121,7 @@ const ContactPage = () => {
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-1 focus:ring-jewelry-accent focus:border-jewelry-accent"
                     placeholder="Jane Doe"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -109,6 +138,7 @@ const ContactPage = () => {
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-1 focus:ring-jewelry-accent focus:border-jewelry-accent"
                     placeholder="you@example.com"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -125,6 +155,7 @@ const ContactPage = () => {
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-1 focus:ring-jewelry-accent focus:border-jewelry-accent"
                     placeholder="Tell me about your inquiry or project..."
                     required
+                    disabled={isSubmitting}
                   ></textarea>
                 </div>
                 
@@ -135,7 +166,10 @@ const ContactPage = () => {
                     className="w-full px-6 py-3 bg-jewelry-dark text-white font-medium rounded-md hover:bg-black transition-colors disabled:opacity-70 flex items-center justify-center"
                   >
                     {isSubmitting ? (
-                      'Sending...'
+                      <span className="flex items-center">
+                        <LoadingSpinner size="small" color="white" text="" />
+                        <span className="ml-2">Sending...</span>
+                      </span>
                     ) : (
                       <>
                         <Send size={18} className="mr-2" />
@@ -149,8 +183,8 @@ const ContactPage = () => {
           </div>
           
           {/* Contact Info */}
-          <div className="section-animate">
-            <div className="bg-gray-50 rounded-xl p-6 md:p-8 h-full">
+          <div className="contact-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-200">
+            <div className="bg-gray-50 rounded-xl p-6 md:p-8 h-full transition-all duration-300 hover:shadow-md">
               <h3 className="text-2xl font-bold text-jewelry-dark mb-8">
                 Get In Touch
               </h3>
@@ -164,7 +198,7 @@ const ContactPage = () => {
                     <h4 className="font-medium text-jewelry-dark">Email</h4>
                     <a 
                       href="mailto:contact@eleganceartistry.com" 
-                      className="text-jewelry-gray hover:text-jewelry-accent"
+                      className="text-jewelry-gray hover:text-jewelry-accent transition-colors"
                     >
                       contact@eleganceartistry.com
                     </a>
@@ -179,7 +213,7 @@ const ContactPage = () => {
                     <h4 className="font-medium text-jewelry-dark">Phone</h4>
                     <a 
                       href="tel:+15035551234" 
-                      className="text-jewelry-gray hover:text-jewelry-accent"
+                      className="text-jewelry-gray hover:text-jewelry-accent transition-colors"
                     >
                       (503) 555-1234
                     </a>
@@ -211,13 +245,13 @@ const ContactPage = () => {
                     Follow Me
                   </h4>
                   <div className="flex space-x-4">
-                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent">
+                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent transition-colors">
                       Instagram
                     </a>
-                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent">
+                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent transition-colors">
                       Facebook
                     </a>
-                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent">
+                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent transition-colors">
                       Pinterest
                     </a>
                   </div>

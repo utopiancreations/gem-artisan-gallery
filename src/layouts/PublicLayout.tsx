@@ -1,4 +1,4 @@
-
+// src/layouts/PublicLayout.tsx
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -6,45 +6,53 @@ import Footer from '../components/Footer';
 
 const PublicLayout = () => {
   const location = useLocation();
+  console.log("PublicLayout rendering for path:", location.pathname); // DEBUG
 
   useEffect(() => {
     // Scroll to top on route change
     window.scrollTo(0, 0);
-    
-    // Initialize scroll animation observer with better threshold and root margin
-    const observer = new IntersectionObserver((entries) => {
+    console.log('PublicLayout: useEffect - SCROLLED TO TOP. Animations in PublicLayout TEMPORARILY DISABLED.'); // DEBUG
+
+    // IntersectionObserver logic in PublicLayout is COMMENTED OUT for debugging
+    /*
+    const observer = new IntersectionObserver((entries, obsInstance) => {
       entries.forEach(entry => {
-        // Add animated class when element comes into view
         if (entry.isIntersecting) {
           entry.target.classList.add('animated');
+          obsInstance.unobserve(entry.target); // Unobserve after animating
         }
       });
-    }, { 
+    }, {
       threshold: 0.1,
-      rootMargin: '0px 0px -100px 0px' // Trigger animation before elements fully enter viewport
+      rootMargin: '0px 0px -100px 0px'
     });
-    
-    // Add animation classes after a short delay to ensure DOM is ready
+
     const timer = setTimeout(() => {
+      console.log('PublicLayout: (DISABLED) Timer fired, would attempt to observe .section-animate');
       document.querySelectorAll('.section-animate').forEach(section => {
-        // Add baseline opacity to prevent flash of content
         section.classList.add('opacity-1');
         observer.observe(section);
       });
     }, 100);
-    
+
     return () => {
+      console.log('PublicLayout: useEffect cleanup (observer part disabled)');
       clearTimeout(timer);
-      document.querySelectorAll('.section-animate').forEach(section => {
-        observer.unobserve(section);
-      });
+      // observer.disconnect(); // If observer were active, good to disconnect
     };
+    */
+    // End of commented out IntersectionObserver logic in PublicLayout
+     return () => {
+        console.log('PublicLayout: useEffect cleanup (no observer was active here for this test).');
+     }
+
   }, [location.pathname]);
 
   return (
     <>
       <Navbar />
       <main>
+        {console.log("PublicLayout: Rendering Outlet")} {/* DEBUG */}
         <Outlet />
       </main>
       <Footer />

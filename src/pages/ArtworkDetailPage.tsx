@@ -1,7 +1,9 @@
+// src/pages/ArtworkDetailPage.tsx
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { getDocument } from '../lib/firebase';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 interface ArtworkType {
   id: string;
@@ -118,15 +120,6 @@ const ArtworkDetailPage = () => {
           <ArrowLeft size={16} className="mr-1" />
           Back to Gallery
         </Link>
-        
-        {/* Debug info */}
-        <div className="mb-4 p-4 bg-gray-100 rounded text-sm" style={{whiteSpace: 'pre-wrap'}}>
-          <strong>Debug Info (remove in production):</strong><br/>
-          ID: {artwork.id}<br/>
-          Title: {artwork.title}<br/>
-          Category: {artwork.category}<br/>
-          Image URL: {artwork.imageUrl ? 'Exists' : 'Missing'}<br/>
-        </div>
         
         <div className="grid md:grid-cols-2 gap-10">
           <div className="rounded-xl overflow-hidden shadow-md">

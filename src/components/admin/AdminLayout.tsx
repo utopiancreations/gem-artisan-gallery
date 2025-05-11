@@ -91,7 +91,7 @@ const AdminLayout = () => {
         } md:left-0 transition-all duration-300`}
       >
         <div className="p-6 border-b">
-          <h2 className="text-xl font-bold text-jewelry-dark">Elegance Artistry</h2>
+          <h2 className="text-xl font-bold text-jewelry-dark">Ravencroft Design</h2>
           <p className="text-sm text-jewelry-gray">Admin Dashboard</p>
         </div>
         

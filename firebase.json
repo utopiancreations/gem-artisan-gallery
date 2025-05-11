@@ -1,0 +1,17 @@
+{
+  "hosting": {
+    "public": "dist", // Or "build", or whatever your project's build output folder is
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [ // <<< THIS IS THE CRUCIAL PART
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+  // ... any other Firebase service configurations ...
+}
