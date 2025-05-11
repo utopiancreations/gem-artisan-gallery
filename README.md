@@ -1,73 +1,119 @@
-# Welcome to your Lovable project
+# Gem Artisan Gallery
 
-## Project info
+A professional portfolio website for showcasing handcrafted jewelry and artistic creations.
 
-**URL**: https://lovable.dev/projects/c1daa50e-cd4e-4417-8747-a7bb969188e0
+## Overview
 
-## How can I edit this code?
+This elegant, responsive website serves as a digital showcase for artisanal jewelry creations. The site features:
 
-There are several ways of editing your application.
+- A dynamic homepage with featured works and upcoming events
+- An interactive gallery with category filtering
+- About page with artist information
+- Events calendar for exhibitions and shows
+- Contact form for custom inquiries
 
-**Use Lovable**
+## Technologies
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/c1daa50e-cd4e-4417-8747-a7bb969188e0) and start prompting.
+This project is built with modern web technologies:
 
-Changes made via Lovable will be committed automatically to this repo.
+- **React** - UI development with functional components and hooks
+- **TypeScript** - Type-safe JavaScript
+- **Vite** - Next-generation frontend build tool
+- **Tailwind CSS** - Utility-first CSS framework for streamlined styling
+- **Firebase** - Backend services for data storage, authentication, and hosting
+- **shadcn-ui** - UI component library for consistent, accessible interface elements
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js (v18+) - [Install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- npm (v9+)
+- Git
+- Firebase account (for database and hosting)
 
-Follow these steps:
+### Local Development
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+# Clone the repository
+git clone https://github.com/utopiancreations/gem-artisan-gallery.git
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Navigate to project directory
+cd gem-artisan-gallery
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Set up environment variables
+# Create a .env.local file with your Firebase configuration
+# See .env.example for required variables
+
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at http://localhost:5173 (or another port if 5173 is in use).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Project Structure
 
-**Use GitHub Codespaces**
+```
+gem-artisan-gallery/
+├── public/            # Static assets
+├── src/
+│   ├── components/    # Reusable UI components
+│   ├── hooks/         # Custom React hooks
+│   ├── lib/           # Utility functions and Firebase setup
+│   ├── pages/         # Page components
+│   ├── App.tsx        # Main application component
+│   └── main.tsx       # Application entry point
+├── .env.example       # Example environment variables
+├── index.html         # HTML template
+├── package.json       # Dependencies and scripts
+├── tailwind.config.js # Tailwind CSS configuration
+├── tsconfig.json      # TypeScript configuration
+└── README.md          # Project documentation
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Deployment
 
-## What technologies are used for this project?
+This site can be deployed to Firebase Hosting:
 
-This project is built with:
+```bash
+# Build the production version
+npm run build
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# Deploy to Firebase
+npm run deploy
+```
 
-## How can I deploy this project?
+You can also deploy to other hosting providers like Vercel, Netlify, or GitHub Pages.
 
-Simply open [Lovable](https://lovable.dev/projects/c1daa50e-cd4e-4417-8747-a7bb969188e0) and click on Share -> Publish.
+## Features
 
-## Can I connect a custom domain to my Lovable project?
+- **Smooth Animations**: Polished page transitions and loading states
+- **Responsive Design**: Optimized viewing experience across all device sizes
+- **Firebase Integration**: Real-time database for artwork, events, and contact form submissions
+- **SEO Optimized**: Meta tags and structured data for better search engine visibility
+- **Accessibility**: WCAG compliant components and keyboard navigation
 
-Yes, you can!
+## Contributing
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contact
+
+Your Name - jmiller@utopiancreations.one
+
+Project Link: [https://github.com/utopiancreations/gem-artisan-gallery](https://github.com/utopiancreations/gem-artisan-gallery)
+
+---
+
+© 2025 Utopian Creations. All Rights Reserved.
