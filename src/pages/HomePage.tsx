@@ -129,7 +129,7 @@ const HomePage = () => {
           setLoadingLatest(false);
         }
 
-        // --- Upcoming Event Fetching and Processing ---
+        // --- Upcoming Show Fetching and Processing ---
         const rawEvents = await getCollection('events') as RawEventType[];
         console.log(`Processed ${rawEvents.length} raw events`);
 
@@ -146,17 +146,19 @@ const HomePage = () => {
             })),
           }));
 
-          // 2. Filter for current year events only
-          const currentYear = new Date().getFullYear();
-          const currentYearEvents = transformedEvents.filter(event =>
+          // 2. Filter for events within the last 365 days (not calendar year)
+          const now = new Date();
+          const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          
+          const recentEvents = transformedEvents.filter(event =>
             event.dates.some(d => {
-              const eventYear = (d.date as Date).getFullYear();
-              return eventYear >= currentYear;
+              const eventDate = d.date as Date;
+              return eventDate >= oneYearAgo;
             })
           );
 
-          // 3. Filter for future events from current year events
-          const futureEvents = currentYearEvents.filter(event =>
+          // 3. Filter for future events from recent events
+          const futureEvents = recentEvents.filter(event =>
             event.dates.some(d => isInFuture(d.date as Date))
           );
           console.log(`Found ${futureEvents.length} future events after transformation`);
@@ -263,7 +265,7 @@ const HomePage = () => {
               <img
                 src={currentHighlightedWork.imageUrl}
                 alt={currentHighlightedWork.title}
-                className="w-full h-full object-cover object-center"
+                className="w-full h-full object-contain object-center bg-jewelry-dark"
                 onError={(e) => {
                   console.error('Failed to load image:', currentHighlightedWork.imageUrl);
                   e.currentTarget.src = 'https://placehold.co/1200x800?text=Image+Not+Available';
@@ -349,13 +351,13 @@ const HomePage = () => {
         )}
       </section>
 
-      {/* Upcoming Event Section */}
+      {/* Upcoming Show Section */}
       {loadingEvents ? (
         <section className="py-16 bg-jewelry-light">
           <div className="container mx-auto px-4">
             <SectionHeading
-              title="Upcoming Event"
-              subtitle="Loading event information..."
+              title="Upcoming Show"
+              subtitle="Loading show information..."
               centered
             />
             <div className="max-w-3xl mx-auto">
@@ -367,7 +369,7 @@ const HomePage = () => {
         <section className="py-16 bg-jewelry-light home-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-100">
           <div className="container mx-auto px-4">
             <SectionHeading
-              title="Upcoming Event"
+              title="Upcoming Show"
               subtitle="Join me at my next showcase to experience my latest creations in person."
               centered
             />
@@ -377,10 +379,10 @@ const HomePage = () => {
               {/* Link to view all events */}
               <div className="mt-8 text-center">
                 <Link
-                  to="/events"
+                  to="/shows"
                   className="inline-flex items-center text-jewelry-dark font-medium hover:text-jewelry-accent transition-colors"
                 >
-                  View All Events
+                  View All Shows
                   <ArrowRight size={16} className="ml-1" />
                 </Link>
               </div>

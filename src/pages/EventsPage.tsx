@@ -1,10 +1,10 @@
+
 // src/pages/EventsPage.tsx
 import { useState, useEffect } from 'react';
 import SectionHeading from '../components/SectionHeading';
 import EventItem, { EventType } from '../components/EventItem';
 import { getCollection } from '../lib/firebase';
 import { Timestamp } from 'firebase/firestore';
-import { isPastEvent } from '../lib/dateUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 // Interface for the raw event data from Firestore
@@ -21,6 +21,20 @@ interface RawFirestoreEvent {
   dates: RawFirestoreEventDate[];
 }
 
+// Helper function to check if an event is past (older than 365 days)
+const isEventPast = (event: EventType): boolean => {
+  if (!event.dates || event.dates.length === 0) return false;
+  
+  const now = new Date();
+  const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+  
+  // Check if all dates are older than 365 days
+  return event.dates.every(dateEntry => {
+    const eventDate = new Date(dateEntry.date);
+    return eventDate < oneYearAgo;
+  });
+};
+
 const EventsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,28 +45,28 @@ const EventsPage = () => {
   const [contentVisible, setContentVisible] = useState(false);
 
   useEffect(() => {
-    console.log('Fetching events data...');
+    console.log('Fetching shows data...');
     setLoading(true);
     setError(null);
     setContentVisible(false);
 
     const fetchEvents = async () => {
       try {
-        console.log('Starting to fetch events...');
+        console.log('Starting to fetch shows...');
         const rawEventsData = await getCollection('events') as RawFirestoreEvent[];
-        console.log('Raw events data from Firestore:', rawEventsData);
+        console.log('Raw shows data from Firestore:', rawEventsData);
 
         let safeRawEventsData = rawEventsData;
         if (!rawEventsData) {
           console.warn('rawEventsData is undefined or null after fetch.');
           safeRawEventsData = [];
         } else if (rawEventsData.length === 0) {
-          console.log('No events found in Firestore (array is empty).');
+          console.log('No shows found in Firestore (array is empty).');
         }
 
-        console.log('Transforming raw event data...');
+        console.log('Transforming raw show data...');
         const transformedEvents: EventType[] = safeRawEventsData.map(rawEvent => {
-          if (!rawEvent.id) console.warn('Event missing ID:', rawEvent);
+          if (!rawEvent.id) console.warn('Show missing ID:', rawEvent);
           if (!rawEvent.dates || !Array.isArray(rawEvent.dates)) {
             console.error('rawEvent is missing "dates" array or it is not an array!', rawEvent);
             return {
@@ -70,18 +84,43 @@ const EventsPage = () => {
             description: rawEvent.description,
             dates: rawEvent.dates.map(rawDateItem => {
               if (!rawDateItem.date || typeof rawDateItem.date.toDate !== 'function') {
-                console.error('Invalid Firestore Timestamp object in rawDateItem.date:', rawDateItem, 'for event ID:', rawEvent.id);
+                console.error('Invalid Firestore Timestamp object in rawDateItem.date:', rawDateItem, 'for show ID:', rawEvent.id);
                 return { date: new Date(), time: rawDateItem.time || 'Unknown Time' };
               }
               return { date: rawDateItem.date.toDate(), time: rawDateItem.time };
             }),
           };
         });
-        console.log('Transformed events:', transformedEvents);
+        console.log('Transformed shows:', transformedEvents);
 
-        console.log('Filtering and sorting events...');
-        const upcoming = transformedEvents.filter(event => event && !isPastEvent(event));
-        const past = transformedEvents.filter(event => event && isPastEvent(event));
+        console.log('Filtering and sorting shows...');
+        const now = new Date();
+        
+        // Filter for upcoming shows (future dates)
+        const upcoming = transformedEvents.filter(event => {
+          if (!event.dates || event.dates.length === 0) return false;
+          return event.dates.some(dateEntry => {
+            const eventDate = new Date(dateEntry.date);
+            return eventDate >= now;
+          });
+        });
+        
+        // Filter for past shows (events within the last 365 days but not in the future)
+        const past = transformedEvents.filter(event => {
+          if (!event.dates || event.dates.length === 0) return false;
+          
+          // Check if event has any future dates
+          const hasFutureDates = event.dates.some(dateEntry => {
+            const eventDate = new Date(dateEntry.date);
+            return eventDate >= now;
+          });
+          
+          // If it has future dates, it's not a past event
+          if (hasFutureDates) return false;
+          
+          // Check if it's not older than 365 days
+          return !isEventPast(event);
+        });
 
         upcoming.sort((a, b) => {
           if (!a.dates?.length || !b.dates?.length) return 0;
@@ -95,17 +134,17 @@ const EventsPage = () => {
           const bDate = new Date(b.dates[0].date);
           return bDate.getTime() - aDate.getTime();
         });
-        console.log('Sorted upcoming events:', upcoming);
-        console.log('Sorted past events:', past);
+        console.log('Sorted upcoming shows:', upcoming);
+        console.log('Sorted past shows:', past);
 
         console.log('Setting upcomingEvents and pastEvents states...');
         setUpcomingEvents(upcoming);
         setPastEvents(past);
-        console.log('Event states have been set.');
+        console.log('Show states have been set.');
 
       } catch (err) {
         console.error("Error during fetch or processing:", err);
-        setError("Failed to process events. Please try again later.");
+        setError("Failed to process shows. Please try again later.");
       } finally {
         console.log('Fetch/process attempt complete, setting loading to false.');
         setLoading(false);
@@ -139,15 +178,15 @@ const EventsPage = () => {
       <div className="pt-24 pb-16">
         <div className="container mx-auto px-4">
           <SectionHeading
-            title="Events"
-            subtitle="Loading events information..."
+            title="Shows"
+            subtitle="Loading shows information..."
             className="animated" // Always show the heading
           />
           <div className="space-y-8 mt-10">
-            {/* Upcoming Events Loading Skeleton */}
+            {/* Upcoming Shows Loading Skeleton */}
             <div>
               <h3 className="text-2xl font-bold text-jewelry-dark mb-6">
-                Upcoming Events
+                Upcoming Shows
               </h3>
               <div className="space-y-6">
                 {[1, 2].map(i => (
@@ -164,10 +203,10 @@ const EventsPage = () => {
               </div>
             </div>
             
-            {/* Past Events Loading Skeleton */}
+            {/* Past Shows Loading Skeleton */}
             <div>
               <h3 className="text-2xl font-bold text-jewelry-dark mb-6">
-                Past Events
+                Past Shows
               </h3>
               <div className="space-y-6">
                 {[1, 2].map(i => (
@@ -193,12 +232,12 @@ const EventsPage = () => {
     return (
       <div className="pt-24 pb-16">
         <div className="container mx-auto px-4 text-center">
-          <SectionHeading title="Events" subtitle="Something went wrong." />
+          <SectionHeading title="Shows" subtitle="Something went wrong." />
           <div className="bg-red-50 p-6 rounded-lg mt-8 text-red-600">
             <svg className="w-12 h-12 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <p className="font-medium text-lg mb-2">Error Loading Events</p>
+            <p className="font-medium text-lg mb-2">Error Loading Shows</p>
             <p>{error}</p>
           </div>
         </div>
@@ -210,15 +249,15 @@ const EventsPage = () => {
     <div className={`pt-24 pb-16 transition-opacity duration-500 ${contentVisible ? 'opacity-100' : 'opacity-0'}`}>
       <div className="container mx-auto px-4">
         <SectionHeading
-          title="Events"
-          subtitle="Join me at these upcoming events to see my work in person and discuss custom pieces."
+          title="Shows"
+          subtitle="Join me at these upcoming shows to see my work in person and discuss custom pieces."
           className="events-section-animate opacity-0 transform translate-y-4 transition-all duration-500"
         />
         
-        {/* --- Upcoming Events --- */}
+        {/* --- Upcoming Shows --- */}
         <div className="mb-16 events-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-100">
           <h3 className="text-2xl font-bold text-jewelry-dark mb-6">
-            Upcoming Events
+            Upcoming Shows
           </h3>
           {upcomingEvents.length > 0 ? (
             <div className="space-y-6 transition-all">
@@ -235,16 +274,16 @@ const EventsPage = () => {
           ) : (
             <div className="bg-gray-50 rounded-lg p-8 text-center">
               <p className="text-jewelry-gray">
-                No upcoming events scheduled at the moment. Check back soon or subscribe to our newsletter to be notified.
+                No upcoming shows scheduled at the moment. Check back soon or subscribe to our newsletter to be notified.
               </p>
             </div>
           )}
         </div>
         
-        {/* --- Past Events --- */}
+        {/* --- Past Shows --- */}
         <div className="events-section-animate opacity-0 transform translate-y-4 transition-all duration-500 delay-200">
           <h3 className="text-2xl font-bold text-jewelry-dark mb-6">
-            Past Events
+            Past Shows
           </h3>
           {pastEvents.length > 0 ? (
             <div className="space-y-6">
@@ -261,7 +300,7 @@ const EventsPage = () => {
           ) : (
             <div className="bg-gray-50 rounded-lg p-8 text-center">
               <p className="text-jewelry-gray">
-                No past events to display.
+                No past shows to display.
               </p>
             </div>
           )}

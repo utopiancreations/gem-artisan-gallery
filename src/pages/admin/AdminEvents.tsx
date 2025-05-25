@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Plus, Calendar, MapPin, Edit, Trash, Save, X } from 'lucide-react';
 import { getCollection, createDocument, updateDocument, deleteDocument } from '../../lib/firebase';
@@ -69,10 +70,10 @@ const AdminEvents = () => {
         setEvents(processedEvents);
       }
     } catch (error) {
-      console.error('Error fetching events:', error);
+      console.error('Error fetching shows:', error);
       toast({
         title: "Error",
-        description: "Failed to load events.",
+        description: "Failed to load shows.",
         variant: "destructive"
       });
     } finally {
@@ -145,23 +146,23 @@ const AdminEvents = () => {
         await updateDocument('events', editingEvent.id, eventData);
         toast({
           title: "Success",
-          description: "Event updated successfully!",
+          description: "Show updated successfully!",
         });
       } else {
         await createDocument('events', eventData);
         toast({
           title: "Success",
-          description: "Event created successfully!",
+          description: "Show created successfully!",
         });
       }
 
       resetForm();
       fetchEvents();
     } catch (error) {
-      console.error('Error saving event:', error);
+      console.error('Error saving show:', error);
       toast({
         title: "Error",
-        description: "Failed to save event.",
+        description: "Failed to save show.",
         variant: "destructive"
       });
     } finally {
@@ -170,20 +171,20 @@ const AdminEvents = () => {
   };
 
   const handleDelete = async (eventId: string) => {
-    if (!confirm('Are you sure you want to delete this event?')) return;
+    if (!confirm('Are you sure you want to delete this show?')) return;
 
     try {
       await deleteDocument('events', eventId);
       toast({
         title: "Success",
-        description: "Event deleted successfully!",
+        description: "Show deleted successfully!",
       });
       fetchEvents();
     } catch (error) {
-      console.error('Error deleting event:', error);
+      console.error('Error deleting show:', error);
       toast({
         title: "Error",
-        description: "Failed to delete event.",
+        description: "Failed to delete show.",
         variant: "destructive"
       });
     }
@@ -228,22 +229,22 @@ const AdminEvents = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
           <Calendar size={22} className="mr-2" />
-          <h1 className="text-2xl font-bold">Manage Events</h1>
+          <h1 className="text-2xl font-bold">Manage Shows</h1>
         </div>
         <Button onClick={() => setShowForm(true)} className="flex items-center">
           <Plus size={16} className="mr-2" />
-          Add Event
+          Add Show
         </Button>
       </div>
 
       {showForm && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</CardTitle>
+            <CardTitle>{editingEvent ? 'Edit Show' : 'Add New Show'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="title">Event Title *</Label>
+              <Label htmlFor="title">Show Title *</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -268,13 +269,13 @@ const AdminEvents = () => {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Additional event details..."
+                placeholder="Additional show details..."
                 rows={3}
               />
             </div>
 
             <div>
-              <Label>Event Dates & Times *</Label>
+              <Label>Show Dates & Times *</Label>
               {formData.dates.map((dateEntry, index) => (
                 <div key={index} className="flex gap-2 mt-2 items-end">
                   <div className="flex-1">
@@ -327,7 +328,7 @@ const AdminEvents = () => {
             <div className="flex gap-2">
               <Button onClick={handleSave} disabled={saving}>
                 <Save size={16} className="mr-2" />
-                {saving ? 'Saving...' : (editingEvent ? 'Update Event' : 'Save Event')}
+                {saving ? 'Saving...' : (editingEvent ? 'Update Show' : 'Save Show')}
               </Button>
               <Button variant="outline" onClick={resetForm}>
                 Cancel
@@ -342,7 +343,7 @@ const AdminEvents = () => {
           <Card>
             <CardContent className="text-center py-8">
               <Calendar size={48} className="mx-auto mb-4 text-gray-400" />
-              <p className="text-gray-500">No events found. Add your first event!</p>
+              <p className="text-gray-500">No shows found. Add your first show!</p>
             </CardContent>
           </Card>
         ) : (

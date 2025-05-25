@@ -1,8 +1,8 @@
+
 // src/pages/ContactPage.tsx
 import { useState, useEffect } from 'react';
 import { Mail, Phone, Send } from 'lucide-react';
 import SectionHeading from '../components/SectionHeading';
-import { createDocument } from '../lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -14,6 +14,8 @@ const ContactPage = () => {
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
   
   // Animation control state
   const [contentVisible, setContentVisible] = useState(false);
@@ -64,24 +66,37 @@ const ContactPage = () => {
         throw new Error('Please enter a valid email address');
       }
       
-      // Send to Firestore
-      await createDocument('contactSubmissions', {
-        ...formData,
-        submittedAt: new Date()
+      // Create form data for FormSubmit
+      const submitFormData = new FormData();
+      submitFormData.append('name', formData.name);
+      submitFormData.append('email', formData.email);
+      submitFormData.append('message', formData.message);
+      submitFormData.append('_subject', 'New Contact Form Submission from Ravenscroft Design');
+      submitFormData.append('_captcha', 'false');
+      submitFormData.append('_template', 'table');
+      
+      // Submit to FormSubmit
+      const response = await fetch('https://formsubmit.co/melissa@ravenscroftdesign.com', {
+        method: 'POST',
+        body: submitFormData
       });
       
-      // Success notification
-      toast({
-        title: "Message Sent",
-        description: "Thank you for your message. I'll get back to you soon!",
-      });
-      
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        message: ''
-      });
+      if (response.ok) {
+        // Success notification
+        toast({
+          title: "Message Sent",
+          description: "Thank you for your message. I'll get back to you soon!",
+        });
+        
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          message: ''
+        });
+      } else {
+        throw new Error('Failed to send message');
+      }
       
     } catch (error: any) {
       toast({
@@ -91,6 +106,47 @@ const ContactPage = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubscribing(true);
+
+    try {
+      if (!newsletterEmail.trim() || !newsletterEmail.includes('@')) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Submit to Mailchimp via FormSubmit (you'll need to set up a Mailchimp webhook)
+      const submitFormData = new FormData();
+      submitFormData.append('email', newsletterEmail);
+      submitFormData.append('_subject', 'New Newsletter Subscription - Ravenscroft Design');
+      submitFormData.append('_captcha', 'false');
+      
+      const response = await fetch('https://formsubmit.co/melissa@ravenscroftdesign.com', {
+        method: 'POST',
+        body: submitFormData
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Subscribed!",
+          description: "Thank you for subscribing to our newsletter!",
+        });
+        setNewsletterEmail('');
+      } else {
+        throw new Error('Failed to subscribe');
+      }
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
@@ -190,6 +246,12 @@ const ContactPage = () => {
               </h3>
               
               <div className="space-y-6">
+                <div>
+                  <h4 className="text-xl font-bold text-jewelry-dark mb-4">
+                    Ravenscroft Jewelry by Melissa Zahm
+                  </h4>
+                </div>
+
                 <div className="flex items-start">
                   <div className="flex-shrink-0 bg-jewelry-light p-2.5 rounded-full mr-4">
                     <Mail className="h-5 w-5 text-jewelry-dark" />
@@ -197,10 +259,10 @@ const ContactPage = () => {
                   <div>
                     <h4 className="font-medium text-jewelry-dark">Email</h4>
                     <a 
-                      href="mailto:contact@eleganceartistry.com" 
+                      href="mailto:melissa@ravenscroftdesign.com" 
                       className="text-jewelry-gray hover:text-jewelry-accent transition-colors"
                     >
-                      contact@eleganceartistry.com
+                      melissa@ravenscroftdesign.com
                     </a>
                   </div>
                 </div>
@@ -212,11 +274,27 @@ const ContactPage = () => {
                   <div>
                     <h4 className="font-medium text-jewelry-dark">Phone</h4>
                     <a 
-                      href="tel:+15035551234" 
+                      href="tel:+18315666455" 
                       className="text-jewelry-gray hover:text-jewelry-accent transition-colors"
                     >
-                      (503) 555-1234
+                      831-566-6455
                     </a>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 bg-jewelry-light p-2.5 rounded-full mr-4">
+                    <svg className="h-5 w-5 text-jewelry-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-jewelry-dark">Address</h4>
+                    <div className="text-jewelry-gray">
+                      <p>PO Box 806</p>
+                      <p>Soquel CA 95073</p>
+                    </div>
                   </div>
                 </div>
                 
@@ -224,37 +302,52 @@ const ContactPage = () => {
                   <h4 className="font-medium text-jewelry-dark mb-3">
                     Studio Hours
                   </h4>
-                  <ul className="space-y-2 text-jewelry-gray">
-                    <li className="flex justify-between">
-                      <span>Monday - Friday</span>
-                      <span>9:00 AM - 5:00 PM</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>Saturday</span>
-                      <span>By Appointment</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>Sunday</span>
-                      <span>Closed</span>
-                    </li>
-                  </ul>
+                  <div className="text-jewelry-gray">
+                    <p className="mb-2">Available 24/7</p>
+                    <p className="text-sm italic">Contact for appointments</p>
+                  </div>
                 </div>
                 
                 <div className="pt-6 border-t border-gray-200">
                   <h4 className="font-medium text-jewelry-dark mb-3">
                     Follow Me
                   </h4>
-                  <div className="flex space-x-4">
-                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent transition-colors">
-                      Instagram
-                    </a>
-                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent transition-colors">
-                      Facebook
-                    </a>
-                    <a href="#" className="text-jewelry-gray hover:text-jewelry-accent transition-colors">
-                      Pinterest
+                  <div className="space-y-2">
+                    <a 
+                      href="https://instagram.com/ravenscroftdesign" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-jewelry-gray hover:text-jewelry-accent transition-colors block"
+                    >
+                      Instagram: @ravenscroftdesign
                     </a>
                   </div>
+                </div>
+                
+                <div className="pt-6 border-t border-gray-200">
+                  <h4 className="font-medium text-jewelry-dark mb-3">
+                    Newsletter
+                  </h4>
+                  <p className="text-sm text-jewelry-gray mb-3">
+                    Stay updated with new pieces and show announcements
+                  </p>
+                  <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
+                    <input
+                      type="email"
+                      value={newsletterEmail}
+                      onChange={(e) => setNewsletterEmail(e.target.value)}
+                      placeholder="Your email"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-jewelry-accent focus:border-jewelry-accent"
+                      disabled={isSubscribing}
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSubscribing || !newsletterEmail.trim()}
+                      className="px-4 py-2 bg-jewelry-accent text-white text-sm rounded-md hover:bg-opacity-90 transition-colors disabled:opacity-50"
+                    >
+                      {isSubscribing ? 'Subscribing...' : 'Subscribe'}
+                    </button>
+                  </form>
                 </div>
               </div>
             </div>
