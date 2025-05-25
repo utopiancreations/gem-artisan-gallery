@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Image, Calendar, User, Mail } from 'lucide-react';
 import { getCollection } from '../../lib/firebase';
 import { ArtworkType } from '../ArtworkCard';
@@ -8,6 +8,7 @@ import { EventType } from '../EventItem';
 import { isPastEvent } from '../../lib/dateUtils';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalArtworks: 0,
     upcomingEvents: 0,
@@ -19,8 +20,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // For production use, fetch real data from Firebase
-        
         // Get artworks count
         const artworks = await getCollection('artworks') as ArtworkType[];
         
@@ -40,18 +39,6 @@ const AdminDashboard = () => {
           contactMessages: messages.length,
           subscribers: subscribers.length
         });
-        
-        /* 
-        // Comment out the demo data instead of deleting it
-        const demoStats = {
-          totalArtworks: 12,
-          upcomingEvents: 3,
-          contactMessages: 8,
-          subscribers: 45
-        };
-        
-        setStats(demoStats);
-        */
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -126,51 +113,49 @@ const AdminDashboard = () => {
       )}
       
       <div className="mt-10">
-  <h2 className="text-xl font-bold text-jewelry-dark mb-4">Quick Actions</h2>
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div
-      onClick={() => {
-        navigate('/admin/artworks');
-        // This will trigger the modal once on the page
-        setTimeout(() => {
-          const addButton = document.querySelector('button:has(svg[data-lucide="plus"])');
-          if (addButton) {
-            (addButton as HTMLButtonElement).click();
-          }
-        }, 500);
-      }}
-      className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border-l-4 border-blue-500 cursor-pointer"
-    >
-      <h3 className="font-semibold text-jewelry-dark mb-2">Add New Artwork</h3>
-      <p className="text-sm text-jewelry-gray">Upload and publish a new jewelry piece to your collection.</p>
-    </div>
-    
-    <div
-      onClick={() => {
-        navigate('/admin/events');
-        // This will trigger the modal once on the page
-        setTimeout(() => {
-          const addButton = document.querySelector('button:has(svg[data-lucide="plus"])');
-          if (addButton) {
-            (addButton as HTMLButtonElement).click();
-          }
-        }, 500);
-      }}
-      className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border-l-4 border-green-500 cursor-pointer"
-    >
-      <h3 className="font-semibold text-jewelry-dark mb-2">Create New Event</h3>
-      <p className="text-sm text-jewelry-gray">Schedule and publish a new exhibition or workshop.</p>
-    </div>
-    
-    <Link
-      to="/admin/about"
-      className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border-l-4 border-purple-500"
-    >
-      <h3 className="font-semibold text-jewelry-dark mb-2">Update About Page</h3>
-      <p className="text-sm text-jewelry-gray">Refresh your bio, profile picture, or studio information.</p>
-    </Link>
-  </div>
-</div>
+        <h2 className="text-xl font-bold text-jewelry-dark mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div
+            onClick={() => {
+              navigate('/admin/artworks');
+              setTimeout(() => {
+                const addButton = document.querySelector('button:has(svg[data-lucide="plus"])');
+                if (addButton) {
+                  (addButton as HTMLButtonElement).click();
+                }
+              }, 500);
+            }}
+            className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border-l-4 border-blue-500 cursor-pointer"
+          >
+            <h3 className="font-semibold text-jewelry-dark mb-2">Add New Artwork</h3>
+            <p className="text-sm text-jewelry-gray">Upload and publish a new jewelry piece to your collection.</p>
+          </div>
+          
+          <div
+            onClick={() => {
+              navigate('/admin/events');
+              setTimeout(() => {
+                const addButton = document.querySelector('button:has(svg[data-lucide="plus"])');
+                if (addButton) {
+                  (addButton as HTMLButtonElement).click();
+                }
+              }, 500);
+            }}
+            className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border-l-4 border-green-500 cursor-pointer"
+          >
+            <h3 className="font-semibold text-jewelry-dark mb-2">Create New Event</h3>
+            <p className="text-sm text-jewelry-gray">Schedule and publish a new exhibition or workshop.</p>
+          </div>
+          
+          <Link
+            to="/admin/about"
+            className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border-l-4 border-purple-500"
+          >
+            <h3 className="font-semibold text-jewelry-dark mb-2">Update About Page</h3>
+            <p className="text-sm text-jewelry-gray">Refresh your bio, profile picture, or studio information.</p>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };

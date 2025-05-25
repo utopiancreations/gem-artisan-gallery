@@ -1,18 +1,16 @@
 
 import { useState, useEffect } from 'react';
-import { getCollection } from '../lib/firebase'; // Make sure getCollection fetches 'createdAt'
+import { getCollection } from '../lib/firebase';
 import SectionHeading from '../components/SectionHeading';
 import GalleryPricingNotice from '../components/GalleryPricingNotice';
 import ArtworkCard, { ArtworkType } from '../components/ArtworkCard';
 
-// Define a type that includes the createdAt field
 interface ArtworkWithTimestamp extends ArtworkType {
-  createdAt?: any; // Using 'any' for flexibility, but ideally use Firebase Timestamp type or Date
-  status?: 'active' | 'sold' | 'archive'; // Add status field for category system
+  createdAt?: any;
+  status?: 'active' | 'sold' | 'archive';
 }
 
 const GalleryPage = () => {
-  // Use the new type for the state
   const [artworks, setArtworks] = useState<ArtworkWithTimestamp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +24,6 @@ const GalleryPage = () => {
     const fetchArtworks = async () => {
       try {
         setLoading(true);
-        // Ensure your getCollection function retrieves the 'createdAt' field
         const result = await getCollection('artworks');
         console.log('Raw result from getCollection:', result);
 
@@ -39,12 +36,11 @@ const GalleryPage = () => {
         if (result.length === 0) {
           console.log('No artworks found in collection');
           setArtworks([]);
-          setCategories([]); // Also clear categories if no artworks
+          setCategories([]);
           return;
         }
 
-        // Process artwork data
-        const processedArtworks: ArtworkWithTimestamp[] = result.map(artwork => ({
+        const processedArtworks: ArtworkWithTimestamp[] = result.map((artwork: any) => ({
           id: String(artwork.id || ''),
           title: String(artwork.title || 'Untitled'),
           description: String(artwork.description || 'No description provided'),
@@ -52,25 +48,19 @@ const GalleryPage = () => {
           category: String(artwork.category || 'Uncategorized'),
           isHighlighted: Boolean(artwork.isHighlighted),
           isFeatured: Boolean(artwork.isFeatured),
-          status: artwork.status || 'active', // Default to active if no status
-          // Make sure the 'createdAt' field is included here
-          createdAt: artwork.createdAt, // <-- Include the timestamp here
+          status: artwork.status || 'active',
+          createdAt: artwork.createdAt,
         }));
 
-        // --- ADD SORTING LOGIC HERE ---
-        // Sort by createdAt in descending order (most recent first)
         processedArtworks.sort((a, b) => {
-          // Handle cases where createdAt might be missing or invalid
           const dateA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
           const dateB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
 
-          return dateB - dateA; // Descending order (most recent first)
+          return dateB - dateA;
         });
-        // --- END SORTING LOGIC ---
 
         setArtworks(processedArtworks);
 
-        // Extract categories from the now sorted artworks
         const uniqueCategories = Array.from(
           new Set(processedArtworks.map(artwork => artwork.category))
         );
@@ -79,24 +69,21 @@ const GalleryPage = () => {
       } catch (err) {
         console.error('Error fetching artworks:', err);
         setError('Failed to load artworks');
-        setArtworks([]); // Clear artworks on error
-        setCategories([]); // Clear categories on error
+        setArtworks([]);
+        setCategories([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchArtworks();
-  }, [refresh]); // Added refresh as a dependency to re-fetch data when refreshed manually
+  }, [refresh]);
 
-  // Filter artworks based on category and status
   const filteredArtworks = artworks.filter(artwork => {
-    // Status filter
     if (statusFilter !== 'all' && artwork.status !== statusFilter) {
       return false;
     }
     
-    // Category filter
     if (selectedCategory !== 'All' && artwork.category !== selectedCategory) {
       return false;
     }
@@ -113,7 +100,6 @@ const GalleryPage = () => {
           className="section-animate"
         />
 
-        {/* Pricing Notice */}
         <GalleryPricingNotice />
 
         {loading ? (
@@ -122,9 +108,7 @@ const GalleryPage = () => {
           <div className="text-center py-8 text-red-500">{error}</div>
         ) : (
           <>
-            {/* Filters */}
             <div className="mb-8 space-y-4">
-              {/* Status Filter */}
               <div className="flex justify-center">
                 <div className="inline-flex flex-wrap gap-2 justify-center">
                   <button
@@ -170,7 +154,6 @@ const GalleryPage = () => {
                 </div>
               </div>
 
-              {/* Category Filter */}
               {categories.length > 0 && (
                 <div className="flex justify-center">
                   <div className="inline-flex flex-wrap gap-2 justify-center">
@@ -209,11 +192,9 @@ const GalleryPage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {/* filteredArtworks are already sorted by creation date */}
                 {filteredArtworks.map(artwork => (
                   <div key={artwork.id} className="relative">
                     <ArtworkCard artwork={artwork} />
-                    {/* Status indicator for sold/archive items */}
                     {artwork.status === 'sold' && (
                       <div className="absolute top-4 right-4 bg-red-500 text-white text-xs px-2 py-1 rounded-md font-medium">
                         SOLD

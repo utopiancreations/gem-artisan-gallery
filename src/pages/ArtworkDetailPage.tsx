@@ -1,9 +1,8 @@
-// src/pages/ArtworkDetailPage.tsx
+
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { getDocument } from '../lib/firebase';
-import LoadingSpinner from '../components/LoadingSpinner';
 
 interface ArtworkType {
   id: string;
@@ -43,7 +42,6 @@ const ArtworkDetailPage = () => {
           return;
         }
         
-        // Normalize the data
         const normalizedArtwork = {
           id: String(result.id || ''),
           title: String(result.title || 'Untitled'),
