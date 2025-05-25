@@ -21,7 +21,6 @@ const PublicLayout = () => {
     <>
       <Navbar />
       <main>
-        {console.log("PublicLayout: Rendering Outlet")}
         <Outlet />
       </main>
       <Footer />

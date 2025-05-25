@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Plus, Calendar, MapPin, Edit, Trash, Save, X } from 'lucide-react';
-import { getCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase';
+import { getCollection, createDocument, updateDocument, deleteDocument } from '../../lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,7 +148,7 @@ const AdminEvents = () => {
           description: "Event updated successfully!",
         });
       } else {
-        await addDocument('events', eventData);
+        await createDocument('events', eventData);
         toast({
           title: "Success",
           description: "Event created successfully!",

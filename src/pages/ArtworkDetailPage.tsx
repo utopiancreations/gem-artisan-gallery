@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -42,14 +41,15 @@ const ArtworkDetailPage = () => {
           return;
         }
         
+        // Ensure result has the expected properties before accessing them
         const normalizedArtwork = {
           id: String(result.id || ''),
-          title: String(result.title || 'Untitled'),
-          description: String(result.description || 'No description provided'),
-          imageUrl: String(result.imageUrl || ''),
-          category: String(result.category || 'Uncategorized'),
-          isHighlighted: Boolean(result.isHighlighted),
-          isFeatured: Boolean(result.isFeatured)
+          title: String((result as any).title || 'Untitled'),
+          description: String((result as any).description || 'No description provided'),
+          imageUrl: String((result as any).imageUrl || ''),
+          category: String((result as any).category || 'Uncategorized'),
+          isHighlighted: Boolean((result as any).isHighlighted),
+          isFeatured: Boolean((result as any).isFeatured)
         };
         
         console.log('Processed artwork:', normalizedArtwork);
