@@ -1,3 +1,4 @@
+
 // src/pages/HomePage.tsx
 import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
@@ -145,14 +146,23 @@ const HomePage = () => {
             })),
           }));
 
-          // 2. Filter for future events
-          const futureEvents = transformedEvents.filter(event =>
+          // 2. Filter for current year events only
+          const currentYear = new Date().getFullYear();
+          const currentYearEvents = transformedEvents.filter(event =>
+            event.dates.some(d => {
+              const eventYear = (d.date as Date).getFullYear();
+              return eventYear >= currentYear;
+            })
+          );
+
+          // 3. Filter for future events from current year events
+          const futureEvents = currentYearEvents.filter(event =>
             event.dates.some(d => isInFuture(d.date as Date))
           );
           console.log(`Found ${futureEvents.length} future events after transformation`);
 
           if (futureEvents.length > 0) {
-            // 3. Sort future events to get the soonest one first
+            // 4. Sort future events to get the soonest one first
             futureEvents.sort((a, b) => {
               const firstDateA = a.dates[0]?.date;
               const firstDateB = b.dates[0]?.date;
@@ -266,10 +276,10 @@ const HomePage = () => {
             {/* Content Overlay */}
             <div className="container mx-auto px-4 h-full flex flex-col justify-center relative z-10">
               <div className="max-w-2xl">
-                {/* Hero Heading */}
-                <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
-                  Handcrafted <br />
-                  <span className="text-jewelry-accent">Elegance</span>
+                {/* Hero Heading - Updated branding */}
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
+                  <span className="text-jewelry-accent text-5xl md:text-6xl lg:text-7xl">Ravenscroft Design</span> <br />
+                  <span className="text-2xl md:text-3xl lg:text-4xl font-medium">by Melissa Zahm</span>
                 </h1>
                 {/* Hero Subtitle/Description */}
                 <p className="text-xl text-gray-200 mb-8 max-w-lg">
@@ -327,7 +337,10 @@ const HomePage = () => {
           // Fallback JSX when no highlighted works
           <div className="container mx-auto px-4 h-full flex flex-col justify-center">
             <div className="text-center text-white">
-              <h1 className="text-4xl font-bold mb-4">No Highlighted Works Yet</h1>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
+                <span className="text-jewelry-accent text-5xl md:text-6xl lg:text-7xl">Ravenscroft Design</span> <br />
+                <span className="text-2xl md:text-3xl lg:text-4xl font-medium">by Melissa Zahm</span>
+              </h1>
               <p className="text-xl mb-8">
                 Please add some highlighted works through the admin panel.
               </p>
@@ -408,12 +421,12 @@ const HomePage = () => {
             />
             {/* Grid layout for featured artwork */}
             <div className="grid md:grid-cols-2 gap-10 items-center">
-              {/* Featured Image */}
-              <div className="rounded-xl overflow-hidden aspect-square">
+              {/* Featured Image - Updated sizing */}
+              <div className="rounded-xl overflow-hidden aspect-square max-w-md mx-auto">
                 <img
                   src={featuredArtwork.imageUrl}
                   alt={featuredArtwork.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain bg-gray-50"
                   onError={(e) => {
                     console.error('Failed to load featured image:', featuredArtwork.imageUrl);
                     e.currentTarget.src = 'https://placehold.co/600x600?text=Image+Not+Available';

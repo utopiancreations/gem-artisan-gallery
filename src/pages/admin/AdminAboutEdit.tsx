@@ -1,89 +1,92 @@
 
-import { useState, useEffect, ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Edit, Save, Upload } from 'lucide-react';
-import { getDocument, updateDocument, uploadFile } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
+import { User, Save, Upload, Image } from 'lucide-react';
+import { getDocument, updateDocument, uploadFile } from '../../lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AboutData {
-  id?: string;
+  id: string;
   title: string;
   description: string;
-  imageUrl: string;
+  imageUrl?: string;
 }
 
 const AdminAboutEdit = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [about, setAbout] = useState<AboutData>({
+  const [aboutData, setAboutData] = useState<AboutData>({
+    id: 'aboutMe',
     title: '',
     description: '',
     imageUrl: ''
   });
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
-    const fetchAboutData = async () => {
-      try {
-        const aboutData = await getDocument('siteContent', 'aboutMe');
-        if (aboutData) {
-          setAbout(aboutData as AboutData);
-          setPreviewUrl(aboutData.imageUrl);
-        }
-      } catch (error) {
-        console.error('Error fetching about data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load about page data.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAboutData();
-  }, [toast]);
+  }, []);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      
-      // Create preview URL for the selected image
+  const fetchAboutData = async () => {
+    try {
+      setLoading(true);
+      const data = await getDocument('siteContent', 'aboutMe');
+      if (data) {
+        const typedData = data as AboutData;
+        setAboutData(typedData);
+        if (typedData.imageUrl) {
+          setImagePreview(typedData.imageUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching about data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load about page data.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
+      reader.onload = () => {
+        setImagePreview(reader.result as string);
       };
-      reader.readAsDataURL(selectedFile);
+      reader.readAsDataURL(file);
     }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      let imageUrl = about.imageUrl;
+      let imageUrl = aboutData.imageUrl;
       
-      // Upload new image if selected
-      if (file) {
-        const timestamp = new Date().getTime();
-        const path = `about/${timestamp}_${file.name}`;
-        imageUrl = await uploadFile(file, path);
+      if (selectedFile) {
+        const uploadResult = await uploadFile(selectedFile, `about/profile-${Date.now()}`);
+        imageUrl = uploadResult.original;
       }
-      
-      // Update Firestore document
-      await updateDocument('siteContent', 'aboutMe', {
-        ...about,
+
+      const updatedData = {
+        ...aboutData,
         imageUrl
-      });
+      };
+
+      await updateDocument('siteContent', 'aboutMe', updatedData);
+      setAboutData(updatedData);
+      setSelectedFile(null);
       
       toast({
         title: "Success",
@@ -103,119 +106,107 @@ const AdminAboutEdit = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-1/3" />
-        <Skeleton className="h-60 w-full" />
-        <Skeleton className="h-10 w-1/4" />
+      <div className="space-y-6">
+        <div className="flex items-center">
+          <Skeleton className="h-6 w-6 mr-2" />
+          <Skeleton className="h-8 w-48" />
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold flex items-center">
-          <Edit size={22} className="mr-2" />
-          Edit About Page
-        </h1>
-        <Button 
-          onClick={handleSave} 
-          disabled={saving}
-          className="flex items-center"
-        >
-          <Save size={18} className="mr-2" />
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
+      <div className="flex items-center mb-6">
+        <User size={22} className="mr-2" />
+        <h1 className="text-2xl font-bold">Edit About Me Page</h1>
       </div>
-      
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>About Content</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium mb-1">
-              Page Title
-            </label>
-            <Input
-              id="title"
-              value={about.title}
-              onChange={(e) => setAbout(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="About Me"
-              className="max-w-md"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium mb-1">
-              Description
-            </label>
-            <Textarea
-              id="description"
-              value={about.description}
-              onChange={(e) => setAbout(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Write about yourself, your journey, your craftsmanship..."
-              rows={8}
-            />
-          </div>
-        </CardContent>
-      </Card>
       
       <Card>
         <CardHeader>
-          <CardTitle>Primary Photo</CardTitle>
+          <CardTitle>About Page Content</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Upload Image
-              </label>
-              <div className="flex items-center space-x-4">
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={() => document.getElementById('image-upload')?.click()}
-                  className="flex items-center"
-                >
-                  <Upload size={16} className="mr-2" />
-                  Select Image
-                </Button>
-                <input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-                <span className="text-sm text-muted-foreground">
-                  {file ? file.name : 'No file selected'}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Recommended: High resolution, landscape orientation.
-              </p>
+        <CardContent className="space-y-6">
+          <div>
+            <Label htmlFor="title">Page Title</Label>
+            <Input
+              id="title"
+              value={aboutData.title}
+              onChange={(e) => setAboutData(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="About Melissa Zahm"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={aboutData.description}
+              onChange={(e) => setAboutData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Tell your story..."
+              rows={8}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="photo">Primary Photo</Label>
+            <div className="mt-2">
+              <input
+                id="photo"
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('photo')?.click()}
+                className="flex items-center"
+              >
+                <Upload size={16} className="mr-2" />
+                Choose Photo
+              </Button>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Image Preview
-              </label>
-              {previewUrl ? (
-                <div className="border rounded-md overflow-hidden aspect-square max-w-xs">
-                  <img 
-                    src={previewUrl} 
-                    alt="About me preview"
+            {imagePreview && (
+              <div className="mt-4">
+                <div className="relative w-64 h-64 rounded-lg overflow-hidden border">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
                     className="w-full h-full object-cover"
                   />
+                  {selectedFile && (
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-green-500 text-white text-xs px-2 py-1 rounded">
+                        New Image
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="border border-dashed rounded-md bg-muted p-8 text-center text-muted-foreground max-w-xs">
-                  No image selected
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
+
+          <Button 
+            onClick={handleSave}
+            disabled={saving || !aboutData.title || !aboutData.description}
+            className="flex items-center"
+          >
+            <Save size={16} className="mr-2" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -1,11 +1,14 @@
+
 import { useState, useEffect } from 'react';
 import { getCollection } from '../lib/firebase'; // Make sure getCollection fetches 'createdAt'
 import SectionHeading from '../components/SectionHeading';
+import GalleryPricingNotice from '../components/GalleryPricingNotice';
 import ArtworkCard, { ArtworkType } from '../components/ArtworkCard';
 
 // Define a type that includes the createdAt field
 interface ArtworkWithTimestamp extends ArtworkType {
   createdAt?: any; // Using 'any' for flexibility, but ideally use Firebase Timestamp type or Date
+  status?: 'active' | 'sold' | 'archive'; // Add status field for category system
 }
 
 const GalleryPage = () => {
@@ -15,6 +18,7 @@ const GalleryPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'sold' | 'archive'>('active');
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
@@ -48,6 +52,7 @@ const GalleryPage = () => {
           category: String(artwork.category || 'Uncategorized'),
           isHighlighted: Boolean(artwork.isHighlighted),
           isFeatured: Boolean(artwork.isFeatured),
+          status: artwork.status || 'active', // Default to active if no status
           // Make sure the 'createdAt' field is included here
           createdAt: artwork.createdAt, // <-- Include the timestamp here
         }));
@@ -62,7 +67,6 @@ const GalleryPage = () => {
           return dateB - dateA; // Descending order (most recent first)
         });
         // --- END SORTING LOGIC ---
-
 
         setArtworks(processedArtworks);
 
@@ -85,10 +89,20 @@ const GalleryPage = () => {
     fetchArtworks();
   }, [refresh]); // Added refresh as a dependency to re-fetch data when refreshed manually
 
-
-  const filteredArtworks = selectedCategory === 'All'
-    ? artworks
-    : artworks.filter(artwork => artwork.category === selectedCategory);
+  // Filter artworks based on category and status
+  const filteredArtworks = artworks.filter(artwork => {
+    // Status filter
+    if (statusFilter !== 'all' && artwork.status !== statusFilter) {
+      return false;
+    }
+    
+    // Category filter
+    if (selectedCategory !== 'All' && artwork.category !== selectedCategory) {
+      return false;
+    }
+    
+    return true;
+  });
 
   return (
     <div className="pt-24 pb-16">
@@ -99,17 +113,8 @@ const GalleryPage = () => {
           className="section-animate"
         />
 
-        {/* Manual refresh button */}
-        {/* You can keep or remove this refresh button */}
-        <div className="mb-4 text-center">
-          <button
-            onClick={() => setRefresh(prev => prev + 1)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Refresh Gallery
-          </button>
-        </div>
-
+        {/* Pricing Notice */}
+        <GalleryPricingNotice />
 
         {loading ? (
           <div className="text-center py-8">Loading artworks...</div>
@@ -117,48 +122,108 @@ const GalleryPage = () => {
           <div className="text-center py-8 text-red-500">{error}</div>
         ) : (
           <>
-            {/* Category Filter */}
-            {categories.length > 0 && (
-              <div className="mb-8 flex justify-center">
+            {/* Filters */}
+            <div className="mb-8 space-y-4">
+              {/* Status Filter */}
+              <div className="flex justify-center">
                 <div className="inline-flex flex-wrap gap-2 justify-center">
                   <button
-                    onClick={() => setSelectedCategory('All')}
+                    onClick={() => setStatusFilter('active')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      selectedCategory === 'All'
+                      statusFilter === 'active'
+                        ? 'bg-jewelry-dark text-white'
+                        : 'bg-gray-100 text-jewelry-dark hover:bg-gray-200'
+                    }`}
+                  >
+                    Available
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('sold')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      statusFilter === 'sold'
+                        ? 'bg-jewelry-dark text-white'
+                        : 'bg-gray-100 text-jewelry-dark hover:bg-gray-200'
+                    }`}
+                  >
+                    Sold
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('archive')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      statusFilter === 'archive'
+                        ? 'bg-jewelry-dark text-white'
+                        : 'bg-gray-100 text-jewelry-dark hover:bg-gray-200'
+                    }`}
+                  >
+                    Archive
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      statusFilter === 'all'
                         ? 'bg-jewelry-dark text-white'
                         : 'bg-gray-100 text-jewelry-dark hover:bg-gray-200'
                     }`}
                   >
                     All
                   </button>
+                </div>
+              </div>
 
-                  {categories.map(category => (
+              {/* Category Filter */}
+              {categories.length > 0 && (
+                <div className="flex justify-center">
+                  <div className="inline-flex flex-wrap gap-2 justify-center">
                     <button
-                      key={category}
-                      onClick={() => setSelectedCategory(category)}
+                      onClick={() => setSelectedCategory('All')}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        selectedCategory === category
-                          ? 'bg-jewelry-dark text-white'
+                        selectedCategory === 'All'
+                          ? 'bg-jewelry-accent text-white'
                           : 'bg-gray-100 text-jewelry-dark hover:bg-gray-200'
                       }`}
                     >
-                      {category}
+                      All Categories
                     </button>
-                  ))}
+
+                    {categories.map(category => (
+                      <button
+                        key={category}
+                        onClick={() => setSelectedCategory(category)}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          selectedCategory === category
+                            ? 'bg-jewelry-accent text-white'
+                            : 'bg-gray-100 text-jewelry-dark hover:bg-gray-200'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {filteredArtworks.length === 0 ? (
               <div className="text-center py-12 text-jewelry-gray">
                 No artworks found. Please add some through the admin panel.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {/* filteredArtworks are already sorted by creation date */}
                 {filteredArtworks.map(artwork => (
-                  <div key={artwork.id}>
+                  <div key={artwork.id} className="relative">
                     <ArtworkCard artwork={artwork} />
+                    {/* Status indicator for sold/archive items */}
+                    {artwork.status === 'sold' && (
+                      <div className="absolute top-4 right-4 bg-red-500 text-white text-xs px-2 py-1 rounded-md font-medium">
+                        SOLD
+                      </div>
+                    )}
+                    {artwork.status === 'archive' && (
+                      <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded-md font-medium">
+                        ARCHIVE
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

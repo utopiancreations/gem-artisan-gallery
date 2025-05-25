@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 
 export type ArtworkType = {
@@ -30,7 +31,8 @@ const ArtworkCard = ({ artwork, featured = false }: ArtworkCardProps) => {
 
   return (
     <div className="group rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl bg-white">
-      <div className="relative overflow-hidden aspect-square">
+      {/* Updated image container with better sizing for jewelry */}
+      <div className="relative overflow-hidden w-full h-64 md:h-72 lg:h-80">
         <picture>
           {/* Use thumbnail for small screens */}
           <source 
@@ -41,10 +43,10 @@ const ArtworkCard = ({ artwork, featured = false }: ArtworkCardProps) => {
           <img
             src={artwork.imageUrl}
             alt={artwork.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-contain bg-gray-50 transition-transform duration-500 group-hover:scale-105"
             onError={(e) => {
               console.error('Image failed to load:', artwork.imageUrl);
-              e.currentTarget.src = 'https://placehold.co/600x600?text=Image+Error';
+              e.currentTarget.src = 'https://placehold.co/400x400?text=Image+Error';
             }}
           />
         </picture>
