@@ -21,6 +21,7 @@ const AdminLayout = () => {
     { name: 'Events', path: '/admin/events', icon: Calendar },
     { name: 'Contact Submissions', path: '/admin/contact', icon: MessageSquare },
     { name: 'Newsletter Subscribers', path: '/admin/subscribers', icon: Mail },
+    { name: 'Mailchimp Stats', path: '/admin/newsletter-stats', icon: Mail },
   ];
 
   useEffect(() => {

@@ -6,8 +6,9 @@ export type ArtworkType = {
   title: string;
   description: string;
   imageUrl: string;
-  thumbnailUrl?: string; // Added thumbnail URL
+  thumbnailUrl?: string;
   category: string;
+  status?: 'active' | 'sold' | 'archive';
   isHighlighted?: boolean;
   isFeatured?: boolean;
 };
@@ -31,8 +32,8 @@ const ArtworkCard = ({ artwork, featured = false }: ArtworkCardProps) => {
 
   return (
     <div className="group rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl bg-white">
-      {/* Updated image container with better sizing for jewelry */}
-      <div className="relative overflow-hidden w-full h-64 md:h-72 lg:h-80">
+      {/* Updated image container to use aspect-square */}
+      <div className="relative overflow-hidden w-full aspect-square bg-gray-50"> {/* Changed to aspect-square and ensured bg-gray-50 */}
         <picture>
           {/* Use thumbnail for small screens */}
           <source 
@@ -43,7 +44,7 @@ const ArtworkCard = ({ artwork, featured = false }: ArtworkCardProps) => {
           <img
             src={artwork.imageUrl}
             alt={artwork.title}
-            className="w-full h-full object-contain bg-gray-50 transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" // bg-gray-50 moved to parent
             onError={(e) => {
               console.error('Image failed to load:', artwork.imageUrl);
               e.currentTarget.src = 'https://placehold.co/400x400?text=Image+Error';

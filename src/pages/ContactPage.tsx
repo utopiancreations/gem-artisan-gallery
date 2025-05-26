@@ -5,9 +5,13 @@ import { Mail, Phone, Send } from 'lucide-react';
 import SectionHeading from '../components/SectionHeading';
 import { useToast } from "@/hooks/use-toast";
 import LoadingSpinner from '../components/LoadingSpinner';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const ContactPage = () => {
   const { toast } = useToast();
+  const firebaseFunctions = getFunctions();
+  const subscribeToNewsletterFunction = httpsCallable(firebaseFunctions, 'subscribeToNewsletter');
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,6 +20,11 @@ const ContactPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [newsletterFirstName, setNewsletterFirstName] = useState('');
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
+  // Add state for success/error messages from the function
+  const [newsletterMessage, setNewsletterMessage] = useState('');
+  const [isNewsletterSuccess, setIsNewsletterSuccess] = useState(false);
   
   // Animation control state
   const [contentVisible, setContentVisible] = useState(false);
@@ -112,39 +121,86 @@ const ContactPage = () => {
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubscribing(true);
+    setNewsletterMessage('');
+    setIsNewsletterSuccess(false);
 
-    try {
-      if (!newsletterEmail.trim() || !newsletterEmail.includes('@')) {
-        throw new Error('Please enter a valid email address');
-      }
-
-      // Submit to Mailchimp via FormSubmit (you'll need to set up a Mailchimp webhook)
-      const submitFormData = new FormData();
-      submitFormData.append('email', newsletterEmail);
-      submitFormData.append('_subject', 'New Newsletter Subscription - Ravenscroft Design');
-      submitFormData.append('_captcha', 'false');
-      
-      const response = await fetch('https://formsubmit.co/melissa@ravenscroftdesign.com', {
-        method: 'POST',
-        body: submitFormData
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Subscribed!",
-          description: "Thank you for subscribing to our newsletter!",
-        });
-        setNewsletterEmail('');
-      } else {
-        throw new Error('Failed to subscribe');
-      }
-
-    } catch (error: any) {
+    if (!newsletterConsent) {
       toast({
-        title: "Error",
-        description: error.message || "Something went wrong. Please try again.",
+        title: "Consent Required",
+        description: "Please agree to receive newsletter updates.",
         variant: "destructive"
       });
+      setIsSubscribing(false);
+      return;
+    }
+
+    try {
+      // Try Firebase Function first
+      const result = await subscribeToNewsletterFunction({ 
+        email: newsletterEmail, 
+        firstName: newsletterFirstName 
+      });
+      
+      const resultData = result.data as { success: boolean; message: string };
+      setNewsletterMessage(resultData.message);
+      setIsNewsletterSuccess(resultData.success);
+      
+      if (resultData.success) {
+        toast({
+          title: "Subscribed!",
+          description: resultData.message,
+        });
+        setNewsletterEmail('');
+        setNewsletterFirstName('');
+        setNewsletterConsent(false); // Reset consent
+      } else {
+        toast({
+          title: "Subscription Failed",
+          description: resultData.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.warn('Firebase function failed, attempting FormSubmit fallback', error);
+      setNewsletterMessage('Subscription via primary method failed. Trying fallback...');
+
+      // Fallback to FormSubmit
+      try {
+        const fallbackFormData = new FormData();
+        fallbackFormData.append('email', newsletterEmail);
+        fallbackFormData.append('firstName', newsletterFirstName);
+        fallbackFormData.append('_subject', 'New Newsletter Subscription (Fallback) - Ravenscroft Design');
+        fallbackFormData.append('_captcha', 'false'); // Assuming you still want this
+
+        const response = await fetch('https://formsubmit.co/melissa@ravenscroftdesign.com', { // Replace with your FormSubmit endpoint
+          method: 'POST',
+          body: fallbackFormData
+        });
+
+        if (response.ok) {
+          toast({
+            title: "Subscribed (Fallback)!",
+            description: "Thank you for subscribing! You will receive updates via email.",
+          });
+          setNewsletterMessage('Subscribed via fallback! Thank you.');
+          setIsNewsletterSuccess(true);
+          setNewsletterEmail('');
+          setNewsletterFirstName('');
+          setNewsletterConsent(false);
+        } else {
+          const fallbackErrorText = await response.text();
+          throw new Error(`Fallback failed: ${response.status} ${fallbackErrorText}`);
+        }
+      } catch (fallbackError: any) {
+        console.error('FormSubmit fallback error:', fallbackError);
+        toast({
+          title: "Subscription Failed",
+          description: "Both subscription methods failed. Please try again later or contact support.",
+          variant: "destructive"
+        });
+        setNewsletterMessage('Subscription failed using both methods. Please try again.');
+        setIsNewsletterSuccess(false);
+      }
     } finally {
       setIsSubscribing(false);
     }
@@ -331,22 +387,61 @@ const ContactPage = () => {
                   <p className="text-sm text-jewelry-gray mb-3">
                     Stay updated with new pieces and show announcements
                   </p>
-                  <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
-                    <input
-                      type="email"
-                      value={newsletterEmail}
-                      onChange={(e) => setNewsletterEmail(e.target.value)}
-                      placeholder="Your email"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-jewelry-accent focus:border-jewelry-accent"
-                      disabled={isSubscribing}
-                    />
+                  <form onSubmit={handleNewsletterSubmit} className="space-y-3">
+                    <div>
+                      <input
+                        type="email"
+                        value={newsletterEmail}
+                        onChange={(e) => setNewsletterEmail(e.target.value)}
+                        placeholder="Enter your email address"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-jewelry-accent focus:border-jewelry-accent"
+                        required
+                        disabled={isSubscribing}
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        value={newsletterFirstName}
+                        onChange={(e) => setNewsletterFirstName(e.target.value)}
+                        placeholder="First Name (optional)"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-jewelry-accent focus:border-jewelry-accent"
+                        disabled={isSubscribing}
+                      />
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="newsletterConsent"
+                        checked={newsletterConsent}
+                        onChange={(e) => setNewsletterConsent(e.target.checked)}
+                        className="h-4 w-4 text-jewelry-accent border-gray-300 rounded focus:ring-jewelry-accent"
+                        required
+                        disabled={isSubscribing}
+                      />
+                      <label htmlFor="newsletterConsent" className="ml-2 block text-sm text-jewelry-gray">
+                        I agree to receive newsletter updates about Ravenscroft jewelry.
+                      </label>
+                    </div>
                     <button
                       type="submit"
-                      disabled={isSubscribing || !newsletterEmail.trim()}
-                      className="px-4 py-2 bg-jewelry-accent text-white text-sm rounded-md hover:bg-opacity-90 transition-colors disabled:opacity-50"
+                      disabled={isSubscribing || !newsletterConsent || !newsletterEmail.trim()}
+                      className="w-full px-4 py-2 bg-jewelry-accent text-white text-sm font-medium rounded-md hover:bg-opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center"
                     >
-                      {isSubscribing ? 'Subscribing...' : 'Subscribe'}
+                      {isSubscribing ? (
+                        <>
+                          <LoadingSpinner size="small" color="white" text="" />
+                          <span className="ml-2">Subscribing...</span>
+                        </>
+                      ) : (
+                        'Subscribe to Newsletter'
+                      )}
                     </button>
+                    {newsletterMessage && (
+                      <div className={`mt-2 text-sm ${isNewsletterSuccess ? 'text-green-600' : 'text-red-600'}`}>
+                        {newsletterMessage}
+                      </div>
+                    )}
                   </form>
                 </div>
               </div>

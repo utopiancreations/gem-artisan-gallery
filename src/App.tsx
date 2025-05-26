@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom"; // Removed Navigate
 
 // Public Pages
 import PublicLayout from "./layouts/PublicLayout";
@@ -23,6 +23,7 @@ import AdminArtworks from "./pages/admin/AdminArtworks";
 import AdminEvents from "./pages/admin/AdminEvents";
 import AdminContactSubmissions from "./pages/admin/AdminContactSubmissions";
 import AdminNewsletterSubscribers from "./pages/admin/AdminNewsletterSubscribers";
+import AdminNewsletter from "./components/admin/AdminNewsletter";
 
 // Not Found Page
 import NotFound from "./pages/NotFound";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="events" element={<AdminEvents />} />
             <Route path="contact" element={<AdminContactSubmissions />} />
             <Route path="subscribers" element={<AdminNewsletterSubscribers />} />
+            <Route path="newsletter-stats" element={<AdminNewsletter />} />
           </Route>
           
           {/* Catch-all Route */}

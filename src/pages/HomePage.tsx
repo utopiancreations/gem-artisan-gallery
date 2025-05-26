@@ -69,7 +69,7 @@ const HomePage = () => {
   useEffect(() => {
     const fetchHomePageData = async () => {
       try {
-        console.log('Fetching home page data...');
+        // console.log('Fetching home page data...');
         setLoading(true);
         setLoadingHighlighted(true);
         setLoadingFeatured(true);
@@ -79,59 +79,67 @@ const HomePage = () => {
 
         // --- Artwork Fetching ---
         const allArtworksRaw = await getCollection('artworks') as any[];
-        console.log(`Processed ${allArtworksRaw.length} artworks`);
+        // console.log(`Processed ${allArtworksRaw.length} artworks`);
 
         if (!allArtworksRaw || allArtworksRaw.length === 0) {
-          console.log('No artworks found');
+          // console.log('No artworks found');
           setLoadingHighlighted(false);
           setLoadingFeatured(false);
           setLoadingLatest(false);
         } else {
           const normalizedArtworks: ArtworkWithTimestamp[] = allArtworksRaw.map(artwork => ({
             ...artwork,
+            status: artwork.status || 'active', // Default to 'active' if status is not set
             isHighlighted: normalizeBoolean(artwork.isHighlighted),
             isFeatured: normalizeBoolean(artwork.isFeatured),
             createdAt: artwork.createdAt?.toDate ? artwork.createdAt.toDate() : (artwork.createdAt ? new Date(artwork.createdAt) : new Date(0)),
           }));
 
-          // Create a sorted copy of all artworks by createdAt in descending order
-          const sortedByDateArtworks = [...normalizedArtworks].sort((a, b) => {
+          // Filter for active artworks first
+          const activeArtworks = normalizedArtworks.filter(art => art.status === 'active');
+
+          // Create a sorted copy of active artworks by createdAt in descending order
+          const sortedActiveArtworks = [...activeArtworks].sort((a, b) => {
             const dateA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
             const dateB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
             return dateB - dateA; // Descending order
           });
 
-          // Filter for explicitly highlighted and featured works
-          const highlighted = normalizedArtworks.filter(artwork => artwork.isHighlighted === true);
-          const featured = normalizedArtworks.find(artwork => artwork.isFeatured === true);
-
-          // Process highlighted works
-          if (highlighted.length > 0) {
-            setHighlightedWorks(highlighted);
-            if (currentSlide >= highlighted.length && highlighted.length > 0) setCurrentSlide(0);
+          // Process highlighted works (must be active)
+          const highlightedActive = activeArtworks.filter(artwork => artwork.isHighlighted === true);
+          if (highlightedActive.length > 0) {
+            setHighlightedWorks(highlightedActive);
           } else {
-            const fallbackHighlighted = sortedByDateArtworks.slice(0, 3);
-            setHighlightedWorks(fallbackHighlighted);
-            if (currentSlide >= fallbackHighlighted.length && fallbackHighlighted.length > 0) setCurrentSlide(0);
+            // Fallback to latest 3 active artworks if no specifically highlighted active ones
+            setHighlightedWorks(sortedActiveArtworks.slice(0, 3));
+          }
+          // Reset currentSlide if it's out of bounds for the new highlightedWorks
+          if (currentSlide >= (highlightedActive.length > 0 ? highlightedActive.length : sortedActiveArtworks.slice(0, 3).length) && 
+             (highlightedActive.length > 0 ? highlightedActive.length : sortedActiveArtworks.slice(0, 3).length) > 0) {
+            setCurrentSlide(0);
           }
           setLoadingHighlighted(false);
 
-          // Process featured artwork
-          if (featured) {
-            setFeaturedArtwork(featured);
-          } else if (sortedByDateArtworks.length > 0) {
-            setFeaturedArtwork(sortedByDateArtworks[0]);
+          // Process featured artwork (must be active)
+          const featuredActive = activeArtworks.find(artwork => artwork.isFeatured === true);
+          if (featuredActive) {
+            setFeaturedArtwork(featuredActive);
+          } else if (sortedActiveArtworks.length > 0) {
+            // Fallback to the most recent active artwork if no specifically featured active one
+            setFeaturedArtwork(sortedActiveArtworks[0]);
+          } else {
+            setFeaturedArtwork(null); // No active artworks to feature
           }
           setLoadingFeatured(false);
 
-          // Process latest creations
-          setLatestCreations(sortedByDateArtworks.slice(0, 3));
+          // Process latest creations (must be active)
+          setLatestCreations(sortedActiveArtworks.slice(0, 3));
           setLoadingLatest(false);
         }
 
         // --- Upcoming Show Fetching and Processing ---
         const rawEvents = await getCollection('events') as RawEventType[];
-        console.log(`Processed ${rawEvents.length} raw events`);
+        // console.log(`Processed ${rawEvents.length} raw events`);
 
         if (rawEvents && rawEvents.length > 0) {
           // 1. Transform raw events to EventType
@@ -161,7 +169,7 @@ const HomePage = () => {
           const futureEvents = recentEvents.filter(event =>
             event.dates.some(d => isInFuture(d.date as Date))
           );
-          console.log(`Found ${futureEvents.length} future events after transformation`);
+          // console.log(`Found ${futureEvents.length} future events after transformation`);
 
           if (futureEvents.length > 0) {
             // 4. Sort future events to get the soonest one first
@@ -173,14 +181,14 @@ const HomePage = () => {
               return dateA - dateB; // Ascending order (soonest first)
             });
             setUpcomingEvent(futureEvents[0]);
-            console.log('Set upcoming event:', futureEvents[0].title);
+            // console.log('Set upcoming event:', futureEvents[0].title);
           } else {
             setUpcomingEvent(null);
-            console.log('No upcoming events found.');
+            // console.log('No upcoming events found.');
           }
         } else {
           setUpcomingEvent(null);
-          console.log('No events fetched from collection.');
+          // console.log('No events fetched from collection.');
         }
         setLoadingEvents(false);
 
@@ -193,7 +201,7 @@ const HomePage = () => {
         setLoadingEvents(false);
       } finally {
         setLoading(false);
-        console.log('Finished loading all home page data');
+        // console.log('Finished loading all home page data');
       }
     };
 

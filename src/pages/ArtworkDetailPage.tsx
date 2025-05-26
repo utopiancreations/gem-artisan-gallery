@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { getDocument } from '../lib/firebase';
+import GalleryPricingNotice from '../components/GalleryPricingNotice'; // Import the notice component
 
 interface ArtworkType {
   id: string;
@@ -149,6 +150,8 @@ const ArtworkDetailPage = () => {
               {artwork.description}
             </p>
             
+            <GalleryPricingNotice /> {/* Added the pricing notice */}
+
             <div className="mt-8">
               <Link 
                 to="/contact" 

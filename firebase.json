@@ -13,5 +13,9 @@
       }
     ]
   }
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
+  }
   // ... any other Firebase service configurations ...
 }
